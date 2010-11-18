@@ -9,7 +9,6 @@
  */
 class FilterComponent extends Object {
 
-
 /**
  * Array of actions the component is allowed to filter on.
  *
@@ -41,14 +40,6 @@ class FilterComponent extends Object {
  * @access public
  */
 	public $defaultDateFormat = 'Y-m-d';
-
-/**
- * Default operator for dates, defaults to >=. Use null for =.
- *
- * @var string
- * @access public
- */
-	public $defaultDateOperator = '>=';
 
 /**
  * Default operator for simple queries, defaults to LIKE. Use null for =.
@@ -504,8 +495,16 @@ class FilterComponent extends Object {
  *
  * @return void
  * @access protected
+ *
+ * @todo This function has strayed from its intended purpose. Create a function to handle data massaging.
  */
 	protected function _collectPostData() {
+		$dateFields = array(
+			'datetime',
+			'timestamp',
+			'date',
+			'time',
+		);
 		if(!empty($this->controller->data)) {
 			$modelObject = $this->controller->{$this->controller->modelClass};
 			foreach($this->controller->data as $model => $fields) {
@@ -529,6 +528,8 @@ class FilterComponent extends Object {
 									$result = date($this->defaultTimeFormat, strtotime($result));
 							}
 							$value = $result;
+						} elseif(in_array($columnTypes[$field], $dateFields)) {
+							$value = date($this->defaultDateFormat, strtotime($value));
 						}
 						$this->queryData[$dotField] = $value;
 					}
