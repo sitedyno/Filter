@@ -101,10 +101,14 @@ class FilterHelper extends AppHelper {
 		$out = '';
 		$out.= $this->create($model);
 		foreach($fields as $field) {
+			if(empty($field)) {
+				$out.= sprintf($this->tags[$tag], null, '');
+				continue;
+			}
 			$out.= sprintf($this->tags[$tag], null, $this->input($field, $options));
 		}
 		$out.= sprintf($this->tags[$tag], ' class="actions"', $this->end());
-		$out = sprintf($this->tags['tr'], null, $out);
+		$out = sprintf($this->tags['tr'], ' class="filters"', $out);
 		return $out;
 	}
 
@@ -220,14 +224,24 @@ class FilterHelper extends AppHelper {
 	public function sortingTableRow($fields, $options = array(), $tag = 'th') {
 		$out = '';
 		$count = count($fields);
+		$counter = 0;
 		foreach($fields as $key => $field) {
-			if($key === $count - 1) {
-				$out.= sprintf($this->tags[$tag], ' class="actions"', $this->sort($field, null, $options));
-			} else {
-				$out.= sprintf($this->tags[$tag], null, $this->sort($field, null, $options));
+			if(empty($field)) {
+				$out.= sprintf($this->tags[$tag], null, '');
+				continue;
 			}
+			if($counter === $count - 1) {
+				$out.= sprintf($this->tags[$tag], ' class="actions"', $field);
+			} else {
+				$sortkey = $field;
+				if(!is_numeric($key)) {
+					$field = $key;
+				}
+				$out.= sprintf($this->tags[$tag], null, $this->sort($field, $sortkey, $options));
+			}
+			$counter++;
 		}
-		$out = sprintf($this->tags['tr'], null, $out);
+		$out = sprintf($this->tags['tr'], ' class="filters"', $out);
 		return $out;
 	}
 }
