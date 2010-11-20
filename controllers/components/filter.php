@@ -406,7 +406,7 @@ class FilterComponent extends Object {
 					$this->query[$modelName]['conditions'][$queryField] = $this->_addWildcards($value);
 					break;
 				case isset($model->belongsTo[$modelName]):
-					$this->query[$modelName]['conditions'][$queryField] = $this->_addWildcards($value);
+					$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value);
 					break;
 				case isset($model->hasAndBelongsToMany[$modelName]):
 					if(!isset($this->query[$model->alias])) {
