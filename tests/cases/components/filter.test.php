@@ -296,7 +296,7 @@ class FilterComponentTestCase extends CakeTestCase {
 			'User.name' => 'John',
 		);
 		$expected = array(
-			'User' => array(
+			'Post' => array(
 				'conditions' => array(
 					'User.name LIKE' => '%John%',
 				),
@@ -403,6 +403,7 @@ class FilterComponentTestCase extends CakeTestCase {
 			'Post' => array(
 				'conditions' => array(
 					'Post.title LIKE' => '%Post%',
+					'User.name LIKE' => '%Jane%',
 				),
 				'joins' => array(
 					array(
@@ -429,11 +430,6 @@ class FilterComponentTestCase extends CakeTestCase {
 				),
 				'group' => array(
 					'Post.id',
-				),
-			),
-			'User' => array(
-				'conditions' => array(
-					'User.name LIKE' => '%Jane%',
 				),
 			),
 		);
