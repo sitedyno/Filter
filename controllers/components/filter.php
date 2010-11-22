@@ -497,6 +497,7 @@ class FilterComponent extends Object {
  * @access protected
  *
  * @todo This function has strayed from its intended purpose. Create a function to handle data massaging.
+ * @todo Edit FilterComponentTest::testCollectPostDataWithEmptyDateField() when this function is refactored.
  */
 	protected function _collectPostData() {
 		$dateFields = array(
@@ -528,8 +529,11 @@ class FilterComponent extends Object {
 									$result = date($this->defaultTimeFormat, strtotime($result));
 							}
 							$value = $result;
-						} elseif(in_array($columnTypes[$field], $dateFields)) {
+						} elseif(in_array($columnTypes[$field], $dateFields) && !empty($value)) {
 							$value = date($this->defaultDateFormat, strtotime($value));
+						} elseif(empty($value)) {
+							// remove empty values?
+							continue;
 						}
 						$this->queryData[$dotField] = $value;
 					}

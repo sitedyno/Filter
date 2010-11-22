@@ -633,6 +633,21 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
+	public function testCollectPostDataWithEmptyDateField() {
+		$this->controller->data = array(
+			'Post' => array(
+				'title' => 'John',
+				'created' => '',
+			),
+		);
+		$expected = array(
+			'Post.title' => 'John',
+		);
+		$this->filter->collectPostData();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
 	public function testParseDotFieldAssociatedModel() {
 		$test = 'Tag.tag';
 		$expected = array(
