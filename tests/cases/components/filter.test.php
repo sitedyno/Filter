@@ -37,40 +37,33 @@ class UserProfile extends AppMOdel {
 
 
 class TestFilterComponent extends FilterComponent {
-
-
 	public function addInnerJoin(&$model, $hasManyModel) {
 		return $this->_addInnerJoin($model, $hasManyModel);
 	}
-
 	public function addInnerJoins(&$model, $field, $values) {
 		return $this->_addInnerJoins($model, $field, $values);
 	}
-
 	public function addWildcards($values) {
 		return $this->_addWildcards($values);
 	}
-
 	public function assignQuery() {
 		return $this->_assignQuery();
 	}
-
 	public function buildRedirectUrl() {
 		return $this->_buildRedirectUrl();
 	}
-
 	public function collectNamedParams() {
 		return $this->_collectNamedParams();
 	}
-
 	public function collectPostData() {
 		return $this->_collectPostData();
 	}
-
 	public function parseDotField($field) {
 		return $this->_parseDotField($field);
 	}
-
+	public function processForQuery() {
+		return $this->_processForQuery();
+	}
 	public function sanitizeForQuery() {
 		return $this->_sanitizeForQuery();
 	}
@@ -489,6 +482,40 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
+	public function testBuildQueryWithVirtualField() {
+		$this->filter->queryData = array(
+			'Post.range_start' => '2010-11-01',
+			'Post.range_end' => '2010-11-05',
+		);
+		$expected = array(
+			'Post' => array(
+				'conditions' => array(
+					'Post.created >=' => '2010-11-01',
+					'Post.created <=' => '2010-11=05',
+				)
+			)
+		);
+		/**
+		 * Maybe add FilterComponent::$virtualFieldDefinitions and use FilterComponent::$virtualFields
+		 * for field mappings.
+		 */
+		$this->filter->virtualFields = array(
+			'range' => array(
+				'mapped_field' => 'Post.created',
+				'fields' => array(
+					'start' => array(
+						'type' => 'date',
+						'operator' => '>=',
+					),
+					'end',
+				)
+			)
+		);
+		$model = $this->controller->{$this->controller->modelClass};
+		$result = $this->filter->buildQuery($model);
+		$this->assertEqual($result, $expected);
+	}
+
 	public function testBuildRedirectUrl() {
 		$this->filter->queryData = array(
 			'Post.title' => 'Post',
@@ -633,7 +660,7 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
-	public function testCollectPostDataWithEmptyDateField() {
+	public function testCollectPostDataWithEmptyField() {
 		$this->controller->data = array(
 			'Post' => array(
 				'title' => 'John',
@@ -676,6 +703,20 @@ class FilterComponentTestCase extends CakeTestCase {
 		$model = 'FakeModel';
 		$this->expectError(sprintf(__('Model %s is not an object of Controller::$modelClass', true), $model));
 		$this->filter->parseDotField($test);
+	}
+
+	public function testProcessForQuery() {
+		$this->filter->queryData = array(
+			'Post.title' => 'John',
+			'Post.created' => 'Nov 1',
+		);
+		$expected = array(
+			'Post.title' => 'John',
+			'Post.created' => '2010-11-01',
+		);
+		$this->filter->processForQuery();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
 	}
 
 	public function testSanitizeForQuery() {

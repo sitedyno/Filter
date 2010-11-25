@@ -295,14 +295,14 @@ class FilterComponent extends Object {
  * Adds INNER joins to a model's query. Used for HABTM filtering.
  *
  * @param object $model
- * @param string $field Uses dot notation Tag.tag, string without dots is assumed to be of Controller::$modelClass
+ * @param string $dotField Uses dot notation Tag.tag, string without dots is assumed to be of Controller::$modelClass
  * @param array $values Array of values to filter against.
  * @return array
  * @access protected
  */
-	protected function _addInnerJoins(&$model, $field, $values) {
+	protected function _addInnerJoins(&$model, $dotField, $values) {
 		$result = array();
-		$fieldParts = $this->_parseDotField($field);
+		$fieldParts = $this->_parseDotField($dotField);
 		$habtm = $model->hasAndBelongsToMany[$fieldParts['model']];
 		$with = $habtm['with'];
 		$joinTable = $habtm['joinTable'];
@@ -316,7 +316,7 @@ class FilterComponent extends Object {
 		);
 		$conditionsB = array(
 			"{$model->{$fieldParts['model']}->alias}.{$model->{$fieldParts['model']}->primaryKey} = $with.{$habtm['associationForeignKey']}",
-			$field => (array) $values,
+			$dotField => (array) $values,
 		);
 		$result['joins'][] = array(
 			'table' => $model->{$fieldParts['model']}->table,
@@ -388,19 +388,20 @@ class FilterComponent extends Object {
 /**
  * Build the query.
  *
+ * @param object The main model for the query.
  * @return
  * @access public
  *
  * @todo Implement virtual fields.
  */
 	public function buildQuery(&$model) {
-		foreach($this->queryData as $modelField => $value) {
-			if(!$modelFieldParts = $this->_parseDotField($modelField)) {
+		foreach($this->queryData as $dotField => $value) {
+			if(!$modelField = $this->_parseDotField($dotField)) {
 				continue;
 			}
-			$modelName = $modelFieldParts['model'];
-			$field = $modelFieldParts['field'];
-			$queryField = $this->_setOperator($modelField);
+			$modelName = $modelField['model'];
+			$field = $modelField['field'];
+			$queryField = $this->_setOperator($dotField);
 			switch(true) {
 				case $modelName == $model->alias: // query on a field of the main model
 					$this->query[$modelName]['conditions'][$queryField] = $this->_addWildcards($value);
@@ -412,7 +413,7 @@ class FilterComponent extends Object {
 					if(!isset($this->query[$model->alias])) {
 						$this->query[$model->alias] = array();
 					}
-					$this->query[$model->alias] = array_merge_recursive($this->query[$model->alias], $this->_addInnerJoins($model, $modelField, $value));
+					$this->query[$model->alias] = array_merge_recursive($this->query[$model->alias], $this->_addInnerJoins($model, $dotField, $value));
 					break;
 				case isset($model->hasMany[$modelName]):
 					if(!isset($this->query[$model->alias])) {
@@ -496,16 +497,9 @@ class FilterComponent extends Object {
  * @return void
  * @access protected
  *
- * @todo This function has strayed from its intended purpose. Create a function to handle data massaging.
- * @todo Edit FilterComponentTest::testCollectPostDataWithEmptyDateField() when this function is refactored.
+ * @todo May want to create a wrapper for returning columntypes.
  */
 	protected function _collectPostData() {
-		$dateFields = array(
-			'datetime',
-			'timestamp',
-			'date',
-			'time',
-		);
 		if(!empty($this->controller->data)) {
 			$modelObject = $this->controller->{$this->controller->modelClass};
 			foreach($this->controller->data as $model => $fields) {
@@ -518,24 +512,9 @@ class FilterComponent extends Object {
 				foreach($fields as $field => $value) {
 					$dotField = $model . '.' . $field;
 					if(!in_array($dotField, $this->ignoredFields) && isset($columnTypes[$field])) {
-						if(is_array($value) && !is_null($result = $modelObject->deconstruct($field, $value))) {
-							switch($columnTypes[$field]) {
-								case 'datetime':
-								case 'timestamp':
-								case 'date':
-									$result = date($this->defaultDateFormat, strtotime($result));
-									break;
-								case 'time':
-									$result = date($this->defaultTimeFormat, strtotime($result));
-							}
-							$value = $result;
-						} elseif(in_array($columnTypes[$field], $dateFields) && !empty($value)) {
-							$value = date($this->defaultDateFormat, strtotime($value));
-						} elseif(empty($value)) {
-							// remove empty values?
-							continue;
+						if(!empty($value)) {
+							$this->queryData[$dotField] = $value;
 						}
-						$this->queryData[$dotField] = $value;
 					}
 				}
 			}
@@ -599,6 +578,48 @@ class FilterComponent extends Object {
 	}
 
 /**
+ * Process data for query.
+ *
+ * @return void
+ * @access protected
+ *
+ * @todo May want to create a wrapper for returning columntypes.
+ */
+	protected function _processForQuery() {
+		$dateFields = array(
+			'datetime',
+			'timestamp',
+			'date',
+			'time',
+		);
+		$columnTypes = array();
+		$modelObject = $this->controller->{$this->controller->modelClass};
+		foreach($this->queryData as $dotField => $value) {
+			extract($modelField = $this->_parseDotField($dotField));
+			if($model === $modelObject->alias) {
+				$columnTypes = $modelObject->getColumnTypes();
+			} elseif(isset($modelObject->{$model}) && is_object($modelObject->{$model})) {
+				$columnTypes = $modelObject->{$model}->getColumnTypes();
+			}
+			$type = '';
+			if(isset($columnTypes[$field])) {
+				$type = $columnTypes[$field];
+			}
+			// process datefields
+			if(in_array($type, $dateFields)) {
+				$result = $modelObject->deconstruct($field, $value);
+				if(!is_null($result)) {
+					$date = $result;
+				} else {
+					$date = $value;
+				}
+				$value = date($this->defaultDateFormat, strtotime($date));
+				$this->queryData[$dotField] = $value;
+			}
+		}
+	}
+
+/**
  * Sanitizes all values for query/SQL while checking for virtual & formatted fields.
  *
  * @return void
@@ -607,27 +628,27 @@ class FilterComponent extends Object {
  * @todo Implement virtual fields.
  */
 	protected function _sanitizeForQuery() {
-		foreach($this->queryData as $field => $value) {
-			$result = array($field, $value);
-			if($this->sanitizeForQuery && isset($this->formattedFields[$field])) {
-				if(0 === preg_match($this->formattedFields[$field], $value, $matches)) {
+		foreach($this->queryData as $dotField => $value) {
+			$result = array($dotField, $value);
+			if($this->sanitizeForQuery && isset($this->formattedFields[$dotField])) {
+				if(0 === preg_match($this->formattedFields[$dotField], $value, $matches)) {
 					// no matches, remove the field
-					unset($this->queryData[$field]);
+					unset($this->queryData[$dotField]);
 					continue;
 				}
 				$sanitized = Sanitize::clean($matches, $this->sanitizeQuerySettings);
 				foreach($matches as $key => $sanitizedValue) {
 					$value = str_replace($sanitizedValue, $sanitized[$key], $value);
 				}
-				$this->queryData[$field] = $value;
+				$this->queryData[$dotField] = $value;
 			}
-			if($this->sanitizeForQuery && isset($this->virtualFields[$field])) {
+			if($this->sanitizeForQuery && isset($this->virtualFields[$dotField])) {
 				trigger_error(__('Virtual Fields not implemented', true), E_USER_ERROR);
 				continue;
 			}
 			if($this->sanitizeForQuery) {
 				$result = Sanitize::clean($result, $this->sanitizeQuerySettings);
-				unset($this->queryData[$field]);
+				unset($this->queryData[$dotField]);
 				$this->queryData[$result[0]] = $result[1];
 			}
 		}
@@ -642,12 +663,12 @@ class FilterComponent extends Object {
  * @todo Implement virtual fields.
  */
 	protected function _sanitizeForRedirect() {
-		foreach($this->queryData as $field => $value) {
-			$result = array($field, $value);
-			if($this->sanitizeForRedirect && isset($this->formattedFields[$field])) {
-				if(0 === preg_match($this->formattedFields[$field], $value, $matches)) {
+		foreach($this->queryData as $dotField => $value) {
+			$result = array($dotField, $value);
+			if($this->sanitizeForRedirect && isset($this->formattedFields[$dotField])) {
+				if(0 === preg_match($this->formattedFields[$dotField], $value, $matches)) {
 					// no matches, remove the field
-					unset($this->queryData[$field]);
+					unset($this->queryData[$dotField]);
 					continue;
 				}
 				unset($matches[0]);
@@ -656,16 +677,16 @@ class FilterComponent extends Object {
 				foreach($matches as $key => $sanitizedValue) {
 					$value = str_replace($sanitizedValue, $sanitized[$key], $value);
 				}
-				$this->queryData[$field] = $value;
+				$this->queryData[$dotField] = $value;
 				continue;
 			}
-			if($this->sanitizeForRedirect && isset($this->virtualFields[$field])) {
+			if($this->sanitizeForRedirect && isset($this->virtualFields[$dotField])) {
 				trigger_error(__('Virtual Fields not implemented', true), E_USER_ERROR);
 				continue;
 			}
 			if($this->sanitizeForRedirect) {
 				$result = Sanitize::clean($result, $this->sanitizeRedirectSettings);
-				unset($this->queryData[$field]);
+				unset($this->queryData[$dotField]);
 				$this->queryData[$result[0]] = $result[1];
 			}
 			unset($this->queryData[$result[0]]);
@@ -682,8 +703,8 @@ class FilterComponent extends Object {
  */
 	protected function _setPostData(&$controller) {
 		if(!empty($this->queryData)) {
-			foreach($this->queryData as $modelField => $value) {
-				extract($this->_parseDotField($modelField));
+			foreach($this->queryData as $dotField => $value) {
+				extract($this->_parseDotField($dotField));
 				$controller->data[$model][$field] = $value;
 			}
 		}
@@ -692,15 +713,15 @@ class FilterComponent extends Object {
 /**
  * Sets the operator for the query based on FilterComponent::defaultOperator.
  *
- * @param string $modelField The field being queried.
+ * @param string $dotField The field being queried.
  * @return string $queryField The modified query field.
  * @access protected
  */
-	protected function _setOperator($modelField) {
+	protected function _setOperator($dotField) {
 		if(!is_null($this->defaultOperator)) {
-			$queryField = $modelField . ' ' . $this->defaultOperator;
+			$queryField = $dotField . ' ' . $this->defaultOperator;
 		} else {
-			$queryField = $modelField;
+			$queryField = $dotField;
 		}
 		return $queryField;
 	}
@@ -708,6 +729,7 @@ class FilterComponent extends Object {
 /**
  * Checks settings and Controller properties. Initiates query or redirect if needed.
  *
+ * @param object The controller object.
  * @return
  * @access public
  */
