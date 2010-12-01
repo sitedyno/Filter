@@ -33,21 +33,199 @@ class FilterHelper extends AppHelper {
 	);
 
 /**
- * Maps field types to db types. Set this in your view and it allows you to determine how dates etc.
- * are rendered by the helper.
+ * Maps field types to db types. Set this in your controller and it allows you to determine how dates etc.
+ * are rendered by the helper. ie:
+ * var $helpers = array('Filter' => array('typeMappings' => array('date' => 'text')));
  *
  * @var array
  * @access public
  */
 	var $typeMappings = array(
 		'text' => 'text',	// this looks wierd but db text type normally yields a textarea form input
-		'datetime' => 'date',
+		'date' => 'text',
+		'datetime' => 'text',
 		'time' => 'time',
 	);
 
 /**
- * Returns an Html form element. Assumes defaults that work well for filtering.
- * See http://api.cakephp.org/class/form-helper#method-FormHelpercreate for options.
+ * Virtual field data.
+ *
+ * @var array
+ * @access public
+ */
+	public $virtualFieldDefinitions = array(
+		'date_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'date',
+				),
+				'end' => array(
+					'type' => 'date',
+				),
+			),
+		),
+		'datetime_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'datetime',
+				),
+				'end' => array(
+					'type' => 'datetime',
+				),
+			),
+		),
+		'time_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'time',
+				),
+				'end' => array(
+					'type' => 'time',
+				),
+			),
+		),
+		'timestamp_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'timestamp',
+				),
+				'end' => array(
+					'type' => 'timestamp',
+				),
+			),
+		),
+		'range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'string',
+				),
+				'end' => array(
+					'type' => 'string',
+				),
+			),
+		),
+		'before' => array(
+			'fields' => array(
+				'before' => array(
+					'type' => 'date',
+				)
+			),
+		),
+		'after' => array(
+			'fields' => array(
+				'after' => array(
+					'type' => 'date',
+				)
+			)
+		),
+		'all' => array(
+			'type' => 'text',
+		)
+	);
+	
+/**
+ * Virtual field mappings.
+ *
+ * @var mixed null/array
+ * @access protected
+ */
+	public $_virtualFieldMaps = null;
+
+/**
+ *
+ * Virtual field user defined mappings: 'existing_field' => 'virtual_field'
+ *
+ * @var array
+ * @access public
+ */
+	public $virtualFields = array();
+
+/**
+ * This defines the character used to seperate the virtual field name from its
+ * sub field names. Defaults to '-'.
+ *
+ * @var string
+ * @access public
+ */
+	public $virtualFieldSeperator = '-';
+
+/**
+ * Creates an input field for "after" filtering.
+ *
+ * @param string $fieldName The name of the field.
+ * @param array $options Options for the field.
+ * @return string
+ * @access public
+ */
+	public function after($fieldName, $options = array()) {
+		$fieldName = $fieldName.$this->virtualFieldSeperator.'after';
+		$options['type'] = $this->virtualFieldDefinitions['after']['fields']['after']['type'];
+		return $this->input($fieldName, $options);
+	}
+
+/**
+ * Creates an input field for "all" filtering.
+ *
+ * @param string $fieldName The name of the field.
+ * @param array $options Options for the field.
+ * @return string
+ * @access public
+ */
+	public function all($options = array()) {
+		$options = array_merge(
+			array(
+				'label' => __('All', true)
+			),
+			$options
+		);
+		$fieldName = $this->params['models'][0].'.'.$this->virtualFieldSeperator.'all';
+		$options['type'] = $this->virtualFieldDefinitions['all']['type'];
+		return $this->input($fieldName, $options);
+	}
+
+/**
+ * Creates an input field for "before" filtering.
+ *
+ * @param string $fieldName The name of the field.
+ * @param array $options Options for the field.
+ * @return string
+ * @access public
+ */
+	public function before($fieldName, $options = array()) {
+		$fieldName = $fieldName.$this->virtualFieldSeperator.'before';
+		$options['type'] = $this->virtualFieldDefinitions['before']['fields']['before']['type'];
+		return $this->input($fieldName, $options);
+	}
+
+/**
+ * Called before the view is rendered.
+ *
+ * @return void
+ * @access public
+ */
+	public function beforeRender() {
+		$this->_set(Configure::read('FilterComponent'));
+	}
+
+/**
+ * Loads settings passed in from the controller.
+ *
+ * @param array $options Array of options for the helper.
+ * @return void
+ * @access public
+ */
+	public function __construct($options = array()) {
+		if(isset($options['typeMappings'])) {
+			$options['typeMappings'] = array_merge($this->typeMappings, $options['typeMappings']);
+		}
+		if(isset($options['virtualFieldDefinitions'])) {
+			$options['virtualFieldDefinitions'] = array_merge($this->virtualFieldDefinitions, $options['virtualFieldDefinitions']);
+		}
+		$this->_set($options);
+	}
+
+/**
+ * Returns an Html form element. See http://api.cakephp.org/class/form-helper#method-FormHelpercreate for options.
  *
  * @param string $model The model object which the form is being defined for.
  * @param array $options An array of html attributes and options.
@@ -55,8 +233,6 @@ class FilterHelper extends AppHelper {
  * @access public
  */
 	public function create($model = null, $options = array()) {
-		$defaults = array();
-		$options = array_merge($defaults, $options);
 		return $this->Form->create($model, $options);
 	}
 
@@ -97,13 +273,42 @@ class FilterHelper extends AppHelper {
  * @return string Html row of filter form inputs.
  * @access public
  */
-	public function formInputTableRow($model, $fields, $options = array(), $tag = 'td') {
+	public function inputTableRow($model, $fields, $options = array(), $tag = 'td') {
 		$out = '';
 		$out.= $this->create($model);
 		foreach($fields as $field) {
 			if(empty($field)) {
 				$out.= sprintf($this->tags[$tag], null, '');
 				continue;
+			}
+			if(!is_null($this->_virtualFieldMaps)) {
+				if(isset($this->virtualFields[$field])) {
+					$type = Set::extract('/'.$this->virtualFields[$field].'/fields/./type', $this->virtualFieldDefinitions);
+					if(isset($type[0])) {
+						$options['type'] = $type[0];
+					} elseif($model.'-all' === $field) {
+							$options['type'] = 'all';
+					}
+					switch($this->virtualFields[$field]) {
+						case 'date_range':
+						case 'datetime_range':
+						case 'time_range':
+						case 'timestamp_range':
+						case 'range':
+							$out.= sprintf($this->tags[$tag], null, $this->range($field, $options));
+							break;
+						case 'before':
+							$out.= sprintf($this->tags[$tag], null, $this->before($field, $options));
+							break;
+						case 'after':
+							$out.= sprintf($this->tags[$tag], null, $this->after($field, $options));
+							break;
+						case 'all':
+							$out.= sprintf($this->tags[$tag], null, $this->all());
+							break;
+					}
+					continue;
+				}
 			}
 			$out.= sprintf($this->tags[$tag], null, $this->input($field, $options));
 		}
@@ -137,9 +342,9 @@ class FilterHelper extends AppHelper {
 		if(isset($this->Form->fieldset[$modelKey]['fields'][$fieldKey]['type'])) {
 			$type = $this->Form->fieldset[$modelKey]['fields'][$fieldKey]['type'];
 		}
-		if(isset($this->typeMappings[$type])) {
+		if(isset($type) && isset($this->typeMappings[$type])) {
 			$options['type'] = $this->typeMappings[$type];
-		} else {
+		} elseif(!isset($options['type'])) {
 			$options['type'] = 'text';
 		}
 		if('id' === $fieldKey) {
@@ -185,6 +390,34 @@ class FilterHelper extends AppHelper {
 			}
 		}
 		return $return;
+	}
+
+/**
+ * Generates a range widget (2 input fields).
+ *
+ * @param string $fieldName This should be "Modelname.fieldname".
+ * @param array $options Options for the input.
+ * @return string A range widget.
+ * @access public
+ */
+	public function range($fieldName, $options = array()) {
+		$out = '';
+		$vfType = $this->virtualFields[$fieldName];
+		$options = array_merge(
+			array('div' => true),
+			$options
+		);
+		if(!is_null($this->_virtualFieldMaps)) {
+			foreach($this->virtualFieldDefinitions[$vfType]['fields'] as $vfdField => $vfDef) {
+				$field = "$fieldName$this->virtualFieldSeperator$vfdField";
+				$options['label'] = $vfdField;
+				if(isset($this->typeMappings[$vfDef['type']])) {
+					$options['type'] = $this->typeMappings[$vfDef['type']];
+				}
+				$out.= $this->input($field, $options);
+			}
+		}
+		return $out;
 	}
 
 /**
