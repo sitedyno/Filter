@@ -551,7 +551,7 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->filter->mapVirtualFields();
 		$model = $this->controller->{$this->controller->modelClass};
 		$this->filter->buildQuery($model);
-		$result = $this->filter->query; vd($result);
+		$result = $this->filter->query;
 		$this->assertEqual($result, $expected);
 	}
 
