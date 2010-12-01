@@ -11,6 +11,10 @@
 App::import('Model', 'AppModel');
 App::import('Component', 'Filter.Filter');
 
+class Ad extends AppModel {
+	var $name = 'Ad';
+	var $belongsTo = array('Post');
+}
 class Comment extends AppModel {
 	var $name = 'Comment';
 	var $belongsTo = array('Post', 'User');
@@ -20,6 +24,7 @@ class Post extends AppModel {
 	var $belongsTo = array('User');
 	var $hasAndBelongsToMany = array('Tag');
 	var $hasMany = array('Comment');
+	var $hasOne = array('Ad');
 }
 class Tag extends AppModel {
 	var $name = 'Tag';
@@ -58,11 +63,14 @@ class TestFilterComponent extends FilterComponent {
 	public function collectPostData() {
 		return $this->_collectPostData();
 	}
+	public function mapVirtualFields() {
+		return $this->_mapVirtualFields();
+	}
 	public function parseDotField($field) {
 		return $this->_parseDotField($field);
 	}
-	public function processForQuery() {
-		return $this->_processForQuery();
+	public function processFields() {
+		return $this->_processFields();
 	}
 	public function sanitizeForQuery() {
 		return $this->_sanitizeForQuery();
@@ -132,13 +140,13 @@ class FilterComponentTestCase extends CakeTestCase {
  * @var array
  * @access public
  */
-	var $fixtures = array(
+	var $fixtures = array(/*
 		'plugin.filter.comment',
 		'plugin.filter.post',
 		'plugin.filter.posts_tag',
 		'plugin.filter.tag',
 		'plugin.filter.user',
-		'plugin.filter.user_profile',
+		'plugin.filter.user_profile',*/
 	);
 
 /**
@@ -300,92 +308,6 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
-	public function testBuildQueryHabtm() {
-		$this->filter->queryData = array(
-			'Tag.tag' => 'understandable',
-		);
-		$expected = array(
-			'Post' => array(
-				'joins' => array(
-					array(
-						'table' => 'posts_tags',
-						'alias' => 'PostsTag',
-						'type' => 'INNER',
-						'foreignKey' => false,
-						'conditions' => array(
-							'Post.id = PostsTag.post_id',
-						),
-					),
-					array(
-						'table' => 'tags',
-						'alias' => 'Tag',
-						'type' => 'INNER',
-						'foreignKey' => false,
-						'conditions' => array(
-							'Tag.id = PostsTag.tag_id',
-							'Tag.tag' => array(
-								'understandable',
-							),
-						),
-					),
-				),
-				'group' => array(
-					'Post.id',
-				)
-			)
-		);
-		$model = $this->controller->{$this->controller->modelClass};
-		$result = $this->filter->buildQuery($model);
-		$this->assertEqual($result, $expected);
-	}
-
-	public function testBuildQueryHasMany() {
-		$this->filter->queryData = array(
-			'Comment.content' => 'short',
-		);
-		$expected = array(
-			'Post' => array(
-				'joins' => array(
-					array(
-						'table' => 'comments',
-						'alias' => 'Comment',
-						'type' => 'INNER',
-						'conditions' => array(
-							'Post.id = Comment.post_id',
-						),
-					),
-				),
-				'group' => array(
-					'Post.id',
-				),
-				'conditions' => array(
-					'Comment.content LIKE' => '%short%',
-				)
-			)
-		);
-		$model = $this->controller->{$this->controller->modelClass};
-		$result = $this->filter->buildQuery($model);
-		$this->assertEqual($result, $expected);
-	}
-
-	public function testBuildQueryHasOne() {
-		$this->filter->queryData = array(
-			'UserProfile.last_name' => 'Jones',
-		);
-		$expected = array(
-			'User' => array(
-				'conditions' => array(
-					'UserProfile.last_name LIKE' => '%Jones%',
-				),
-			),
-		);
-		$model = $this->controller->{$this->controller->modelClass}->User;
-		$this->controller->modelClass = $model->alias;
-		$this->controller->User = $model;
-		$result = $this->filter->buildQuery($model);
-		$this->assertEqual($result, $expected);
-	}
-
 	public function testBuildQueryBelongsToAndHabtm() {
 		$this->filter->queryData = array(
 			'Post.title' => 'Post',
@@ -425,6 +347,45 @@ class FilterComponentTestCase extends CakeTestCase {
 					'Post.id',
 				),
 			),
+		);
+		$model = $this->controller->{$this->controller->modelClass};
+		$result = $this->filter->buildQuery($model);
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testBuildQueryHabtm() {
+		$this->filter->queryData = array(
+			'Tag.tag' => 'understandable',
+		);
+		$expected = array(
+			'Post' => array(
+				'joins' => array(
+					array(
+						'table' => 'posts_tags',
+						'alias' => 'PostsTag',
+						'type' => 'INNER',
+						'foreignKey' => false,
+						'conditions' => array(
+							'Post.id = PostsTag.post_id',
+						),
+					),
+					array(
+						'table' => 'tags',
+						'alias' => 'Tag',
+						'type' => 'INNER',
+						'foreignKey' => false,
+						'conditions' => array(
+							'Tag.id = PostsTag.tag_id',
+							'Tag.tag' => array(
+								'understandable',
+							),
+						),
+					),
+				),
+				'group' => array(
+					'Post.id',
+				)
+			)
 		);
 		$model = $this->controller->{$this->controller->modelClass};
 		$result = $this->filter->buildQuery($model);
@@ -482,37 +443,138 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
-	public function testBuildQueryWithVirtualField() {
+	public function testBuildQueryHasMany() {
 		$this->filter->queryData = array(
-			'Post.range_start' => '2010-11-01',
-			'Post.range_end' => '2010-11-05',
+			'Comment.content' => 'short',
 		);
 		$expected = array(
 			'Post' => array(
-				'conditions' => array(
-					'Post.created >=' => '2010-11-01',
-					'Post.created <=' => '2010-11=05',
-				)
-			)
-		);
-		/**
-		 * Maybe add FilterComponent::$virtualFieldDefinitions and use FilterComponent::$virtualFields
-		 * for field mappings.
-		 */
-		$this->filter->virtualFields = array(
-			'range' => array(
-				'mapped_field' => 'Post.created',
-				'fields' => array(
-					'start' => array(
-						'type' => 'date',
-						'operator' => '>=',
+				'joins' => array(
+					array(
+						'table' => 'comments',
+						'alias' => 'Comment',
+						'type' => 'INNER',
+						'conditions' => array(
+							'Post.id = Comment.post_id',
+						),
 					),
-					'end',
+				),
+				'group' => array(
+					'Post.id',
+				),
+				'conditions' => array(
+					'Comment.content LIKE' => '%short%',
 				)
 			)
 		);
 		$model = $this->controller->{$this->controller->modelClass};
 		$result = $this->filter->buildQuery($model);
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testBuildQueryHasOne() {
+		$this->filter->queryData = array(
+			'UserProfile.last_name' => 'Jones',
+		);
+		$expected = array(
+			'User' => array(
+				'conditions' => array(
+					'UserProfile.last_name LIKE' => '%Jones%',
+				),
+			),
+		);
+		$model = $this->controller->{$this->controller->modelClass}->User;
+		$this->controller->modelClass = $model->alias;
+		$this->controller->User = $model;
+		$result = $this->filter->buildQuery($model);
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testBuildQueryWithAll() {
+		$this->filter->queryData = array(
+			'Post.-all' => 'testing',
+		);
+		$expected = array(
+			'Post' => array(
+				'conditions' => array(
+					'OR' => array(
+						array('Post.id LIKE' => '%testing%'),
+						array('Post.user_id LIKE' => '%testing%'),
+						array('Post.title LIKE' => '%testing%'),
+						array('Post.content LIKE' => '%testing%'),
+						array('Post.created LIKE' => '%testing%'),
+						array('Ad.id LIKE' => '%testing%'),
+						array('Ad.post_id LIKE' => '%testing%'),
+						array('Ad.content LIKE' => '%testing%'),
+						array('User.id LIKE' => '%testing%'),
+						array('User.name LIKE' => '%testing%'),
+						array('User.email LIKE' => '%testing%'),
+					)
+				)
+			)
+		);
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$this->filter->mapVirtualFields();
+		$model = $this->controller->{$this->controller->modelClass};
+		$this->filter->buildQuery($model);
+		$result = $this->filter->query;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testBuildQueryWithAllPredefinedFields() {
+		$this->filter->queryData = array(
+			'Post.-all' => 'testing',
+		);
+		$this->filter->virtualFieldDefinitions['all']['fields'] = array(
+			'Post.title',
+			'Post.content',
+			'Ad.content',
+			'User.name',
+		);
+		$expected = array(
+			'Post' => array(
+				'conditions' => array(
+					'OR' => array(
+						array('Post.title LIKE' => '%testing%'),
+						array('Post.content LIKE' => '%testing%'),
+						array('Ad.content LIKE' => '%testing%'),
+						array('User.name LIKE' => '%testing%'),
+					)
+				)
+			)
+		);
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$this->filter->mapVirtualFields();
+		$model = $this->controller->{$this->controller->modelClass};
+		$this->filter->buildQuery($model);
+		$result = $this->filter->query; vd($result);
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testBuildQueryWithVirtualFields() {
+		$this->filter->queryData = array(
+			'Post.created-start' => '2010-11-01',
+			'Post.created-end' => '2010-11-05',
+		);
+		$expected = array(
+			'Post' => array(
+				'conditions' => array(
+					'Post.created >=' => '2010-11-01',
+					'Post.created <=' => '2010-11-05',
+				)
+			)
+		);
+		$this->filter->virtualFields = array(
+			'Post.created' => 'date_range',
+		);
+		$this->filter->mapVirtualFields();
+		$model = $this->controller->{$this->controller->modelClass};
+		$this->filter->buildQuery($model);
+		$result = $this->filter->query;
 		$this->assertEqual($result, $expected);
 	}
 
@@ -553,29 +615,6 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
-	public function testCollectNamedParamsWithFakeModel() {
-		$this->controller->params['named'] = array(
-			'Fakemodel.some_field' => 'blah',
-		);
-		$model = 'Fakemodel';
-		$expected = array();
-		$this->expectError(sprintf(__('Model %s is not an object of Controller::$modelClass', true), $model));
-		$this->filter->collectNamedParams();
-		$result = $this->filter->queryData;
-		$this->assertEqual($result, $expected);
-	}
-
-	public function testCollectNamedParamsWithFakeFields() {
-		$this->controller->params['named'] = array(
-			'fake_field' => 'blah',
-			'User.fake_field' => 'bleh',
-		);
-		$expected = array();
-		$this->filter->collectNamedParams();
-		$result = $this->filter->queryData;
-		$this->assertEqual($result, $expected);
-	}
-
 	public function testCollectNamedParamsPaginateFields() {
 		$this->controller->params['named'] = array(
 			'direction' => 'desc',
@@ -594,12 +633,69 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
+	public function testCollectNamedParamsWithAll() {
+		$this->controller->params['named'] = array(
+			'Post.-all' => 'testing',
+		);
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$expected = array(
+			'Post.-all' => 'testing',
+		);
+		$this->filter->mapVirtualFields();
+		$this->filter->collectNamedParams();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testCollectNamedParamsWithFakeFields() {
+		$this->controller->params['named'] = array(
+			'fake_field' => 'blah',
+			'User.fake_field' => 'bleh',
+		);
+		$expected = array();
+		$this->filter->collectNamedParams();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testCollectNamedParamsWithFakeModel() {
+		$this->controller->params['named'] = array(
+			'Fakemodel.some_field' => 'blah',
+		);
+		$model = 'Fakemodel';
+		$expected = array();
+		$this->expectError(sprintf(__('Model %s is not an object of Controller::$modelClass', true), $model));
+		$this->filter->collectNamedParams();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
 	public function testCollectNamedParamsWithIgnoredField() {
 		$this->controller->params['named'] = array(
 			'Post.name' => 'Jane',
 		);
 		$this->filter->ignoredFields[] = 'Post.name';
 		$expected = array();
+		$this->filter->collectNamedParams();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testCollectNamedParamsWithVirtualFields() {
+		$this->controller->params['named'] = array(
+			'Post.created-start' => '2010-11-01',
+			'Post.created-end' => '2010-11-05',
+		);
+		$this->filter->virtualFields = array(
+			'Post.created' => 'date_range',
+		);
+		$expected = array(
+			'Post.created-start' => '2010-11-01',
+			'Post.created-end' => '2010-11-05',
+		);
+		$this->filter->mapVirtualFields();
 		$this->filter->collectNamedParams();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
@@ -623,38 +719,19 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
-	public function testCollectPostDataWithFakeModel() {
-		$this->controller->data = array(
-			'FakeModel' => array(
-				'name' => 'Jane',
-			),
-		);
-		$expected = array();
-		$this->filter->collectPostData();
-		$result = $this->filter->queryData;
-		$this->assertEqual($result, $expected);
-	}
-
-	public function testCollectPostDataWithFakeField() {
+	public function testCollectPostDataWithAll() {
 		$this->controller->data = array(
 			'Post' => array(
-				'fake_field' => 'blah',
-			),
+				'-all' => 'testing',
+			)
 		);
-		$expected = array();
-		$this->filter->collectPostData();
-		$result = $this->filter->queryData;
-		$this->assertEqual($result, $expected);
-	}
-
-	public function testCollectPostDataWithIgnoredField() {
-		$this->controller->data = array(
-			'Post' => array(
-				'title' => 'Post',
-			),
+		$expected = array(
+			'Post.-all' => 'testing',
 		);
-		$this->filter->ignoredFields[] = 'Post.title';
-		$expected = array();
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$this->filter->mapVirtualFields();
 		$this->filter->collectPostData();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
@@ -673,6 +750,95 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->filter->collectPostData();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
+	}
+
+	public function testCollectPostDataWithFakeField() {
+		$this->controller->data = array(
+			'Post' => array(
+				'fake_field' => 'blah',
+			)
+		);
+		$expected = array();
+		$this->filter->collectPostData();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testCollectPostDataWithFakeModel() {
+		$this->controller->data = array(
+			'FakeModel' => array(
+				'name' => 'Jane',
+			),
+		);
+		$expected = array();
+		$this->filter->collectPostData();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testCollectPostDataWithIgnoredField() {
+		$this->controller->data = array(
+			'Post' => array(
+				'title' => 'Post',
+			)
+		);
+		$this->filter->ignoredFields[] = 'Post.title';
+		$expected = array();
+		$this->filter->collectPostData();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testCollectPostDataWithVirtualFields() {
+		$this->controller->data = array(
+			'Post' => array(
+				'created-start' => '2010-11-01',
+				'created-end' => '2010-11-05'
+			)
+		);
+		$expected = array(
+			'Post.created-start' => '2010-11-01',
+			'Post.created-end' => '2010-11-05',
+		);
+		$this->filter->virtualFields = array(
+			'Post.created' => 'date_range',
+		);
+		$this->filter->mapVirtualFields();
+		$this->filter->collectPostData();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testMapVirtualFields() {
+		$this->filter->virtualFields = array(
+			'Post.created' => 'date_range',
+		);
+		$expected = array(
+			'Post.created-start' => 'date_range',
+			'Post.created-end' => 'date_range',
+		);
+		$result = $this->filter->mapVirtualFields();
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testMapVirtualFieldsWithAll() {
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$expected = array(
+			'Post.-all' => 'all',
+		);
+		$result = $this->filter->mapVirtualFields();
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testMapVirtualFieldsWithInvalidVirtualField() {
+		$this->filter->virtualFields = array(
+			'Post.created' => 'fake_field',
+		);
+		$vfType = 'fake_field';
+		$this->expectError(sprintf(__('Unknown virtual field: %s', true), $vfType));
+		$this->filter->mapVirtualFields();
 	}
 
 	public function testParseDotFieldAssociatedModel() {
@@ -705,7 +871,17 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->filter->parseDotField($test);
 	}
 
-	public function testProcessForQuery() {
+	public function testParseDotFieldWithAll() {
+		$test = 'Post.-all';
+		$expected = array(
+			'model' => $this->controller->modelClass,
+			'field' => '-all',
+		);
+		$result = $this->filter->parseDotField($test);
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testProcessFields() {
 		$this->filter->queryData = array(
 			'Post.title' => 'John',
 			'Post.created' => 'Nov 1',
@@ -714,7 +890,43 @@ class FilterComponentTestCase extends CakeTestCase {
 			'Post.title' => 'John',
 			'Post.created' => '2010-11-01',
 		);
-		$this->filter->processForQuery();
+		$this->filter->processFields();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testProcessFieldsWithAll() {
+		$this->filter->queryData = array(
+			'Post.-all' => 'testing',
+			'Post.created' => 'Nov 1',
+		);
+		$expected = array(
+			'Post.-all' => 'testing',
+			'Post.created' => '2010-11-01',
+		);
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$this->filter->mapVirtualFields();
+		$this->filter->processFields();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testProcessFieldsWithVirtualField() {
+		$this->filter->queryData = array(
+			'Post.created-start' => 'Nov 1 2010',
+			'Post.created-end' => 'Nov 5 2010',
+		);
+		$expected = array(
+			'Post.created-start' => '2010-11-01',
+			'Post.created-end' => '2010-11-05'
+		);
+		$this->filter->virtualFields = array(
+			'Post.created' => 'date_range'
+		);
+		$this->filter->mapVirtualFields();
+		$this->filter->processFields();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
 	}
@@ -728,6 +940,22 @@ class FilterComponentTestCase extends CakeTestCase {
 			'Post.content' => '!@#$%^&*()?/\\\\[]{}|:;<>',
 			'Post.created' => '2010-10-31 15:30:00',
 		);
+		$this->filter->sanitizeForQuery();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testSanitizeForQueryWithAll() {
+		$this->filter->queryData = array(
+			'Post.-all' => '\\',
+		);
+		$expected = array(
+			'Post.-all' => '\\\\',
+		);
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$this->filter->mapVirtualFields();
 		$this->filter->sanitizeForQuery();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
@@ -763,6 +991,24 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expected);
 	}
 
+	public function testSanitizeForQueryWithVirtualFields() {
+		$this->filter->queryData = array(
+			'Post.created-start' => '\\',
+			'Post.created-end' => '\\',
+		);
+		$expected = array(
+			'Post.created-start' => '\\\\',
+			'Post.created-end' => '\\\\',
+		);
+		$this->filter->virtualFields = array(
+			'Post.created' => 'date_range',
+		);
+		$this->filter->mapVirtualFields();
+		$this->filter->sanitizeForQuery();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
 	public function testSanitizeForRedirect() {
 		// urlencode = true, sanitizeForRedirect = true
 		$this->filter->queryData = array(
@@ -771,6 +1017,22 @@ class FilterComponentTestCase extends CakeTestCase {
 		$expected = array(
 			'Post.created' => '2010-10-31%2015%3A30%3A00',
 		);
+		$this->filter->sanitizeForRedirect();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testSanitizeForRedirectWithAll() {
+		$this->filter->queryData = array(
+			'Post.-all' => '<p>some html</p>',
+		);
+		$expected = array(
+			'Post.-all' => 'some%20html',
+		);
+		$this->filter->virtualFields = array(
+			'Post.-all' => 'all',
+		);
+		$this->filter->mapVirtualFields();
 		$this->filter->sanitizeForRedirect();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
@@ -829,6 +1091,25 @@ class FilterComponentTestCase extends CakeTestCase {
 		$this->filter->formattedFields = array(
 			'Post.created' => '/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/',
 		);
+		$this->filter->sanitizeForRedirect();
+		$result = $this->filter->queryData;
+		$this->assertEqual($result, $expected);
+	}
+
+	public function testSanitizeForRedirectWithVirtualField() {
+		// urlencode = true, sanitizeForRedirect = true
+		$this->filter->queryData = array(
+			'User.name-start' => 'evilstring!@#$%^&*()',
+			'User.name-end' => '<p>some html to boot</p>',
+		);
+		$expected = array(
+			'User.name-start' => 'evilstring%21%40%23%24%25%5E%26amp%3B%2A%28%29',
+			'User.name-end' => 'some%20html%20to%20boot',
+		);
+		$this->filter->virtualFields = array(
+			'User.name' => 'range',
+		);
+		$this->filter->mapVirtualFields();
 		$this->filter->sanitizeForRedirect();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);

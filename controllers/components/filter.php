@@ -35,6 +35,8 @@ class FilterComponent extends Object {
 
 /**
  * Default date format. This can be used to "broaden" the default date query.
+ * If you use datetime fields, this format must be 'Y-m-d H:i' or the form helper
+ * will not set the date correctly.
  *
  * @var string
  * @access public
@@ -195,7 +197,7 @@ class FilterComponent extends Object {
  * - 'sanitizeQuerySettings' => array(),		Settings for Sanitize::clean(), only applies for query not for redirect.
  * - 'spaceIsWildcard' => true,			If true then treat spaces as SQL wildcards.
  * - 'urlencode' => true,				If true then urlencode before redirect.
- * - 'virtualFields' => array(),		Will be used for range, from, between, possibly date conversions, all (all fields), etc. NOT IMPLEMENTED YET.
+ * - 'virtualFields' => array(),		Virtual field user defined mappings: 'existing_field' => 'virtual_field'
  * - 'wrapWildcards' => true,			if true then wrap query value with SQL wildcard.
  *
  * @var array
@@ -249,15 +251,129 @@ class FilterComponent extends Object {
 	public $urlencode = true;
 
 /**
- * Will be used for range, from, between, possibly date conversions, all (all fields), etc.
- * NOT IMPLEMENTED YET.
+ * Virtual field definitions. Will be used for ranges (between), before, after,
+ * and all (all fields), etc.
+ * Predefined virtual fields:
+ * - date_range
+ * - datetime_range
+ * - time_range
+ * - timestamp_range
+ * - range
+ * - before
+ * - after
+ * - all
  *
  * @var array
  * @access public
+ */
+	public $virtualFieldDefinitions = array(
+		'date_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'date',
+					'operator' => '>=',
+				),
+				'end' => array(
+					'type' => 'date',
+					'operator' => '<=',
+				),
+			),
+		),
+		'datetime_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'datetime',
+					'operator' => '>=',
+				),
+				'end' => array(
+					'type' => 'datetime',
+					'operator' => '<=',
+				),
+			),
+		),
+		'time_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'time',
+					'operator' => '>=',
+				),
+				'end' => array(
+					'type' => 'time',
+					'operator' => '<=',
+				),
+			),
+		),
+		'timestamp_range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'timestamp',
+					'operator' => '>=',
+				),
+				'end' => array(
+					'type' => 'timestamp',
+					'operator' => '<=',
+				),
+			),
+		),
+		'range' => array(
+			'fields' => array(
+				'start' => array(
+					'type' => 'string',
+					'operator' => '>=',
+				),
+				'end' => array(
+					'type' => 'string',
+					'operator' => '<=',
+				),
+			),
+		),
+		'before' => array(
+			'fields' => array(
+				'before' => array(
+					'type' => 'date',
+					'operator' => '<=',
+				)
+			),
+		),
+		'after' => array(
+			'fields' => array(
+				'after' => array(
+					'type' => 'date',
+					'operator' => '>=',
+				)
+			)
+		),
+		'all' => array(
+			'condition' => 'OR',
+			'fields' => array(),
+		)
+	);
+
+/**
+ * Virtual field mappings.
  *
- * @todo Iron out the spec/implementation for virtual fields.
+ * @var mixed null/array
+ * @access protected
+ */
+	protected $_virtualFieldMaps = null;
+
+/**
+ *
+ * Virtual field user defined mappings: 'existing_field' => 'virtual_field'
+ *
+ * @var array
+ * @access public
  */
 	public $virtualFields = array();
+
+/**
+ * This defines the character used to seperate the virtual field name from its
+ * sub field names. Defaults to '-'.
+ *
+ * @var string
+ * @access public
+ */
+	public $virtualFieldSeperator = '-';
 
 /**
  * If true then wrap the query value with SQL wildcard
@@ -333,16 +449,17 @@ class FilterComponent extends Object {
  * Wraps the search query in SQL wildcards if FilterComponent::wrapWildcards is true. If FilterComponent::spaceIsWildcard is true spaces will be replaced with SQL wildcard.
  *
  * @param mixed $values String or array of search terms.
+ * @param boolean $wrap False to disable wrapping on this field.
  * @return string
  * @access protected
  */
-	protected function _addWildcards($values = '') {
+	protected function _addWildcards($values = '', $wrap = true) {
 		if($this->wrapWildcards || $this->spaceIsWildcard) {
 			$wildcard = '%';
 			$wildcardPattern = '%%%s%%';
 			if(is_array($values)) {
 				foreach($values as $key => $value) {
-					if($this->wrapWildcards) {
+					if($this->wrapWildcards && $wrap) {
 						$values[$key] = sprintf($wildcardPattern, $values[$key]);
 					}
 					if($this->spaceIsWildcard) {
@@ -351,7 +468,7 @@ class FilterComponent extends Object {
 				}
 			}
 			if(is_string($values)) {
-				if($this->wrapWildcards) {
+				if($this->wrapWildcards && $wrap) {
 					$values = sprintf($wildcardPattern, $values);
 				}
 				if($this->spaceIsWildcard) {
@@ -391,8 +508,6 @@ class FilterComponent extends Object {
  * @param object The main model for the query.
  * @return
  * @access public
- *
- * @todo Implement virtual fields.
  */
 	public function buildQuery(&$model) {
 		foreach($this->queryData as $dotField => $value) {
@@ -400,31 +515,58 @@ class FilterComponent extends Object {
 				continue;
 			}
 			$modelName = $modelField['model'];
-			$field = $modelField['field'];
-			$queryField = $this->_setOperator($dotField);
-			switch(true) {
-				case $modelName == $model->alias: // query on a field of the main model
-					$this->query[$modelName]['conditions'][$queryField] = $this->_addWildcards($value);
-					break;
-				case isset($model->belongsTo[$modelName]):
-					$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value);
-					break;
-				case isset($model->hasAndBelongsToMany[$modelName]):
-					if(!isset($this->query[$model->alias])) {
-						$this->query[$model->alias] = array();
+			if(isset($this->_virtualFieldMaps[$dotField]) && 'all' === $this->_virtualFieldMaps[$dotField]) {
+				$value = $this->_addWildcards($value);
+				if(!empty($this->virtualFieldDefinitions['all']['fields'])) {
+					foreach($this->virtualFieldDefinitions['all']['fields'] as $vfDotField) {
+						$queryField = $this->_setOperator($vfDotField);
+						$this->query[$model->alias]['conditions']['OR'][][$queryField] = $value;
 					}
-					$this->query[$model->alias] = array_merge_recursive($this->query[$model->alias], $this->_addInnerJoins($model, $dotField, $value));
-					break;
-				case isset($model->hasMany[$modelName]):
-					if(!isset($this->query[$model->alias])) {
-						$this->query[$model->alias] = array();
+				} else {
+					$associatedModels = $model->hasOne + $model->belongsTo;
+					$columns = $model->getColumnTypes();
+					foreach($columns as $field => $data) {
+						$queryField = $this->_setOperator("$model->alias.$field");
+						$this->query[$model->alias]['conditions']['OR'][][$queryField] = $value;
 					}
-					$this->query[$model->alias] = array_merge_recursive($this->query[$model->alias], $this->_addInnerJoin($model, $modelName));
-					$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value);
-					break;
-				case isset($model->hasOne[$modelName]):
-					$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value);
-					break;
+					foreach($associatedModels as $associatedModel => $data) {
+						$columns = $model->{$associatedModel}->getColumnTypes();
+						foreach($columns as $field => $data) {
+							$queryField = $this->_setOperator("$associatedModel.$field");
+							$this->query[$model->alias]['conditions']['OR'][][$queryField] = $value;
+						}
+					}
+				}
+			} else {
+				$queryField = $this->_setOperator($dotField);
+				$wrap = true;
+				if(isset($this->_virtualFieldMaps[$dotField])) {
+					$wrap = false;
+				}
+				switch(true) {
+					case $modelName == $model->alias: // query on a field of the main model
+						$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value, $wrap);
+						break;
+					case isset($model->belongsTo[$modelName]):
+						$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value, $wrap);
+						break;
+					case isset($model->hasAndBelongsToMany[$modelName]):
+						if(!isset($this->query[$model->alias])) {
+							$this->query[$model->alias] = array();
+						}
+						$this->query[$model->alias] = array_merge_recursive($this->query[$model->alias], $this->_addInnerJoins($model, $dotField, $value));
+						break;
+					case isset($model->hasMany[$modelName]):
+						if(!isset($this->query[$model->alias])) {
+							$this->query[$model->alias] = array();
+						}
+						$this->query[$model->alias] = array_merge_recursive($this->query[$model->alias], $this->_addInnerJoin($model, $modelName));
+						$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value, $wrap);
+						break;
+					case isset($model->hasOne[$modelName]):
+						$this->query[$model->alias]['conditions'][$queryField] = $this->_addWildcards($value, $wrap);
+						break;
+				}
 			}
 		}
 		if(isset($this->query[$model->alias]['group'])) {
@@ -488,6 +630,9 @@ class FilterComponent extends Object {
 			if(!in_array($field, $this->ignoredFields) && isset($columnTypes[$field])) {
 				$this->queryData[$param] = $value;
 			}
+			if(isset($this->_virtualFieldMaps[$param])) {
+				$this->queryData[$param] = $value;
+			}
 		}
 	}
 
@@ -496,8 +641,6 @@ class FilterComponent extends Object {
  *
  * @return void
  * @access protected
- *
- * @todo May want to create a wrapper for returning columntypes.
  */
 	protected function _collectPostData() {
 		if(!empty($this->controller->data)) {
@@ -512,6 +655,11 @@ class FilterComponent extends Object {
 				foreach($fields as $field => $value) {
 					$dotField = $model . '.' . $field;
 					if(!in_array($dotField, $this->ignoredFields) && isset($columnTypes[$field])) {
+						if(!empty($value)) {
+							$this->queryData[$dotField] = $value;
+						}
+					}
+					if(isset($this->_virtualFieldMaps[$dotField])) {
 						if(!empty($value)) {
 							$this->queryData[$dotField] = $value;
 						}
@@ -535,6 +683,45 @@ class FilterComponent extends Object {
 				App::import('Sanitize');
 			}
 		}
+		$this->_mapVirtualFields();
+		Configure::write(
+			'FilterComponent',
+			array(
+				'_virtualFieldMaps' => $this->_virtualFieldMaps,
+				'virtualFields' => $this->virtualFields,
+				'virtualFieldSeperator' => $this->virtualFieldSeperator,
+			)
+		);
+	}
+
+/**
+ * Creates a mapping of virtual "$dotFields" to the corresponding virtual field type.
+ *
+ * @return void
+ * @access protected
+ */
+	protected function _mapVirtualFields() {
+		if(!is_null($this->_virtualFieldMaps)) {
+			return $this->_virtualFieldMaps;
+		}
+		foreach($this->virtualFields as $dotField => $vfType) {
+			extract($this->_parseDotField($dotField));
+			if(isset($this->virtualFieldDefinitions[$vfType])) {
+				$sep = $this->virtualFieldSeperator;
+				foreach($this->virtualFieldDefinitions[$vfType] as $vfData) {
+					if('all' === $vfType) {
+						$this->_virtualFieldMaps["$model.$sep$vfType"] = $vfType;
+						continue;
+					}
+					foreach($vfData as $vfField => $d) {
+						$this->_virtualFieldMaps["$model.$field$sep$vfField"] = $vfType;
+					}
+				}
+			} else {
+				trigger_error(sprintf(__('Unknown virtual field: %s', true), $vfType), E_USER_ERROR);
+			}
+		}
+		return $this->_virtualFieldMaps;
 	}
 
 /**
@@ -578,20 +765,22 @@ class FilterComponent extends Object {
 	}
 
 /**
+ * Process date fields to insure proper format.
+ *
+ * @return void
+ * @access protected
+ */
+	protected function _processDateFields(&$modelObject, $type, $dotField, $value) {
+
+	}
+
+/**
  * Process data for query.
  *
  * @return void
  * @access protected
- *
- * @todo May want to create a wrapper for returning columntypes.
  */
-	protected function _processForQuery() {
-		$dateFields = array(
-			'datetime',
-			'timestamp',
-			'date',
-			'time',
-		);
+	protected function _processFields() {
 		$columnTypes = array();
 		$modelObject = $this->controller->{$this->controller->modelClass};
 		foreach($this->queryData as $dotField => $value) {
@@ -605,9 +794,29 @@ class FilterComponent extends Object {
 			if(isset($columnTypes[$field])) {
 				$type = $columnTypes[$field];
 			}
+			if(isset($this->_virtualFieldMaps[$dotField])) {
+				$vfType = $this->_virtualFieldMaps[$dotField];
+				$vfFieldParts = explode($this->virtualFieldSeperator, $field);
+				if('all' !== $vfFieldParts[1]) {
+					$type = $this->virtualFieldDefinitions[$vfType]['fields'][$vfFieldParts[1]]['type'];
+				} else {
+					$type = 'all';
+				}
+				$realField = $vfFieldParts[0];
+			}
 			// process datefields
+			$dateFields = array(
+				'datetime',
+				'timestamp',
+				'date',
+				'time',
+			);
 			if(in_array($type, $dateFields)) {
-				$result = $modelObject->deconstruct($field, $value);
+				if(isset($realField)) {
+					$result = $modelObject->deconstruct($realField, $value);
+				} else {
+					$result = $modelObject->deconstruct($field, $value);
+				}
 				if(!is_null($result)) {
 					$date = $result;
 				} else {
@@ -625,7 +834,6 @@ class FilterComponent extends Object {
  * @return void
  * @access protected
  *
- * @todo Implement virtual fields.
  */
 	protected function _sanitizeForQuery() {
 		foreach($this->queryData as $dotField => $value) {
@@ -642,8 +850,10 @@ class FilterComponent extends Object {
 				}
 				$this->queryData[$dotField] = $value;
 			}
-			if($this->sanitizeForQuery && isset($this->virtualFields[$dotField])) {
-				trigger_error(__('Virtual Fields not implemented', true), E_USER_ERROR);
+			if($this->sanitizeForQuery && isset($this->_virtualFieldMaps[$dotField])) {
+				$result = Sanitize::clean($result, $this->sanitizeQuerySettings);
+				unset($this->queryData[$dotField]);
+				$this->queryData[$result[0]] = $result[1];
 				continue;
 			}
 			if($this->sanitizeForQuery) {
@@ -659,12 +869,11 @@ class FilterComponent extends Object {
  *
  * @return void
  * @access protected
- *
- * @todo Implement virtual fields.
  */
 	protected function _sanitizeForRedirect() {
 		foreach($this->queryData as $dotField => $value) {
 			$result = array($dotField, $value);
+			// formmatted fields
 			if($this->sanitizeForRedirect && isset($this->formattedFields[$dotField])) {
 				if(0 === preg_match($this->formattedFields[$dotField], $value, $matches)) {
 					// no matches, remove the field
@@ -680,10 +889,17 @@ class FilterComponent extends Object {
 				$this->queryData[$dotField] = $value;
 				continue;
 			}
-			if($this->sanitizeForRedirect && isset($this->virtualFields[$dotField])) {
-				trigger_error(__('Virtual Fields not implemented', true), E_USER_ERROR);
+			// virtual fields
+			if(isset($this->_virtualFieldMaps[$dotField])) {
+				if($this->sanitizeForRedirect) {
+					$result = Sanitize::clean($result, $this->sanitizeRedirectSettings);
+					$this->queryData[$dotField] = $result[1];
+				}
+				$result = $this->_urlEncode($result);
+				$this->queryData[$dotField] = $result[1];
 				continue;
 			}
+			// normal fields
 			if($this->sanitizeForRedirect) {
 				$result = Sanitize::clean($result, $this->sanitizeRedirectSettings);
 				unset($this->queryData[$dotField]);
@@ -714,11 +930,28 @@ class FilterComponent extends Object {
  * Sets the operator for the query based on FilterComponent::defaultOperator.
  *
  * @param string $dotField The field being queried.
- * @return string $queryField The modified query field.
+ * @return mixed $queryField The modified query field or null if the field should be dropped from the query.
  * @access protected
  */
 	protected function _setOperator($dotField) {
 		if(!is_null($this->defaultOperator)) {
+			if(isset($this->_virtualFieldMaps[$dotField])) {
+				$vfType = $this->_virtualFieldMaps[$dotField];
+				$vfParts = explode($this->virtualFieldSeperator, $dotField);
+				$vfField = $vfParts[1];
+				$realField = $vfParts[0];
+				if(isset($this->virtualFieldDefinitions[$vfType]['fields'][$vfField])) {
+					if(
+						isset($this->virtualFieldDefinitions[$vfType]['fields'][$vfField]['operator'])
+						&& !empty($this->virtualFieldDefinitions[$vfType]['fields'][$vfField]['operator'])
+					) {
+						$vfOp = $this->virtualFieldDefinitions[$vfType]['fields'][$vfField]['operator'];
+						return "$realField $vfOp";
+					} else {
+						return null;
+					}
+				}
+			}
 			$queryField = $dotField . ' ' . $this->defaultOperator;
 		} else {
 			$queryField = $dotField;
@@ -748,18 +981,21 @@ class FilterComponent extends Object {
 			case $this->redirect && !empty($controller->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
 				$this->_collectPostData();
+				$this->_processFields();
 				$this->_sanitizeForRedirect();
 				$this->_buildRedirectUrl();
 				$controller->redirect($this->url);
 				break;
 			case $this->redirect && !empty($controller->data) && empty($controller->params['named']):
 				$this->_collectPostData();
+				$this->_processFields();
 				$this->_sanitizeForRedirect();
 				$this->_buildRedirectUrl();
 				$controller->redirect($this->url);
 				break;
 			case $this->redirect && empty($controller->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
+				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
@@ -767,22 +1003,30 @@ class FilterComponent extends Object {
 			case !$this->redirect && !empty($controller->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
 				$this->_collectPostData();
+				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
 			case !$this->redirect && !empty($controller->data) && empty($controller->params['named']):
 				$this->_collectPostData();
+				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
 			case !$this->redirect && empty($controller->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
+				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
+		}
+		if(Configure::read('debug')) {
+			$this->controller->set('queryData', $this->queryData);
+			$this->controller->set('query', $this->query);
+			$this->controller->set('vfMaps', $this->_virtualFieldMaps);
 		}
 	}
 
