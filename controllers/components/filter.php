@@ -1,6 +1,6 @@
 <?php
 /**
- * Filter Compoent
+ * Filter Component
  *
  * @author		Heath Nail
  * @license		http://www.opensource.org/licenses/mit-license.php The MIT License
@@ -367,13 +367,13 @@ class FilterComponent extends Object {
 	public $virtualFields = array();
 
 /**
- * This defines the character used to seperate the virtual field name from its
+ * This defines the character used to separate the virtual field name from its
  * sub field names. Defaults to '-'.
  *
  * @var string
  * @access public
  */
-	public $virtualFieldSeperator = '-';
+	public $virtualFieldSeparator = '-';
 
 /**
  * If true then wrap the query value with SQL wildcard
@@ -689,7 +689,7 @@ class FilterComponent extends Object {
 			array(
 				'_virtualFieldMaps' => $this->_virtualFieldMaps,
 				'virtualFields' => $this->virtualFields,
-				'virtualFieldSeperator' => $this->virtualFieldSeperator,
+				'virtualFieldSeparator' => $this->virtualFieldSeparator,
 			)
 		);
 	}
@@ -707,7 +707,7 @@ class FilterComponent extends Object {
 		foreach($this->virtualFields as $dotField => $vfType) {
 			extract($this->_parseDotField($dotField));
 			if(isset($this->virtualFieldDefinitions[$vfType])) {
-				$sep = $this->virtualFieldSeperator;
+				$sep = $this->virtualFieldSeparator;
 				foreach($this->virtualFieldDefinitions[$vfType] as $vfData) {
 					if('all' === $vfType) {
 						$this->_virtualFieldMaps["$model.$sep$vfType"] = $vfType;
@@ -796,7 +796,7 @@ class FilterComponent extends Object {
 			}
 			if(isset($this->_virtualFieldMaps[$dotField])) {
 				$vfType = $this->_virtualFieldMaps[$dotField];
-				$vfFieldParts = explode($this->virtualFieldSeperator, $field);
+				$vfFieldParts = explode($this->virtualFieldSeparator, $field);
 				if('all' !== $vfFieldParts[1]) {
 					$type = $this->virtualFieldDefinitions[$vfType]['fields'][$vfFieldParts[1]]['type'];
 				} else {
@@ -937,7 +937,7 @@ class FilterComponent extends Object {
 		if(!is_null($this->defaultOperator)) {
 			if(isset($this->_virtualFieldMaps[$dotField])) {
 				$vfType = $this->_virtualFieldMaps[$dotField];
-				$vfParts = explode($this->virtualFieldSeperator, $dotField);
+				$vfParts = explode($this->virtualFieldSeparator, $dotField);
 				$vfField = $vfParts[1];
 				$realField = $vfParts[0];
 				if(isset($this->virtualFieldDefinitions[$vfType]['fields'][$vfField])) {

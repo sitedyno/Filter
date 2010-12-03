@@ -147,7 +147,7 @@ class FilterHelper extends AppHelper {
  * @var string
  * @access public
  */
-	public $virtualFieldSeperator = '-';
+	public $virtualFieldSeparator = '-';
 
 /**
  * Creates an input field for "after" filtering.
@@ -158,7 +158,7 @@ class FilterHelper extends AppHelper {
  * @access public
  */
 	public function after($fieldName, $options = array()) {
-		$fieldName = $fieldName.$this->virtualFieldSeperator.'after';
+		$fieldName = $fieldName.$this->virtualFieldSeparator.'after';
 		$options['type'] = $this->virtualFieldDefinitions['after']['fields']['after']['type'];
 		return $this->input($fieldName, $options);
 	}
@@ -178,7 +178,7 @@ class FilterHelper extends AppHelper {
 			),
 			$options
 		);
-		$fieldName = $this->params['models'][0].'.'.$this->virtualFieldSeperator.'all';
+		$fieldName = $this->params['models'][0].'.'.$this->virtualFieldSeparator.'all';
 		$options['type'] = $this->virtualFieldDefinitions['all']['type'];
 		return $this->input($fieldName, $options);
 	}
@@ -192,7 +192,7 @@ class FilterHelper extends AppHelper {
  * @access public
  */
 	public function before($fieldName, $options = array()) {
-		$fieldName = $fieldName.$this->virtualFieldSeperator.'before';
+		$fieldName = $fieldName.$this->virtualFieldSeparator.'before';
 		$options['type'] = $this->virtualFieldDefinitions['before']['fields']['before']['type'];
 		return $this->input($fieldName, $options);
 	}
@@ -409,7 +409,7 @@ class FilterHelper extends AppHelper {
 		);
 		if(!is_null($this->_virtualFieldMaps)) {
 			foreach($this->virtualFieldDefinitions[$vfType]['fields'] as $vfdField => $vfDef) {
-				$field = "$fieldName$this->virtualFieldSeperator$vfdField";
+				$field = "$fieldName$this->virtualFieldSeparator$vfdField";
 				$options['label'] = $vfdField;
 				if(isset($this->typeMappings[$vfDef['type']])) {
 					$options['type'] = $this->typeMappings[$vfDef['type']];
