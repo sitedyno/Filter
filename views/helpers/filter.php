@@ -273,7 +273,7 @@ class FilterHelper extends AppHelper {
  * @return string Html row of filter form inputs.
  * @access public
  */
-	public function inputTableRow($model, $fields, $options = array(), $tag = 'td') {
+	public function tableRowForm($model, $fields, $options = array(), $tag = 'td') {
 		$out = '';
 		$out.= $this->create($model);
 		foreach($fields as $field) {
