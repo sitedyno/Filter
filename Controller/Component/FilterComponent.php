@@ -7,7 +7,7 @@
  * @package		filter
  * @subpackage	filter.controller.components
  */
-class FilterComponent extends Object {
+class FilterComponent extends Component {
 
 /**
  * Array of actions the component is allowed to filter on.
