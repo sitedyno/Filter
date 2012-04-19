@@ -615,7 +615,10 @@ class FilterComponent extends Component {
 		if(!$this->redirect && $this->ignoreNamed) {
 			return;
 		}
-		$parameters = $this->controller->params['named'];
+		if(!isset($this->controller->request->params['named'])) {
+			return;
+		}
+		$parameters = $this->controller->request->params['named'];
 		foreach($this->paginateParams as $param) {
 			if(isset($parameters[$param])) {
 				$this->paginateData[$param] = $parameters[$param];
@@ -977,9 +980,9 @@ class FilterComponent extends Component {
 			return;
 		}
 		switch (true) {
-			case empty($controller->request->data) && empty($controller->params['named']):
+			case empty($controller->request->data) && empty($controller->request->params['named']):
 				break;
-			case $this->redirect && !empty($controller->request->data) && !empty($controller->params['named']):
+			case $this->redirect && !empty($controller->request->data) && !empty($controller->request->params['named']):
 				$this->_collectNamedParams();
 				$this->_collectPostData();
 				$this->_processFields();
@@ -987,21 +990,21 @@ class FilterComponent extends Component {
 				$this->_buildRedirectUrl();
 				$controller->redirect($this->url);
 				break;
-			case $this->redirect && !empty($controller->request->data) && empty($controller->params['named']):
+			case $this->redirect && !empty($controller->request->data) && empty($controller->request->params['named']):
 				$this->_collectPostData();
 				$this->_processFields();
 				$this->_sanitizeForRedirect();
 				$this->_buildRedirectUrl();
 				$controller->redirect($this->url);
 				break;
-			case $this->redirect && empty($controller->request->data) && !empty($controller->params['named']):
+			case $this->redirect && empty($controller->request->data) && !empty($controller->request->params['named']):
 				$this->_collectNamedParams();
 				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
-			case !$this->redirect && !empty($controller->request->data) && !empty($controller->params['named']):
+			case !$this->redirect && !empty($controller->request->data) && !empty($controller->request->params['named']):
 				$this->_collectNamedParams();
 				$this->_collectPostData();
 				$this->_processFields();
@@ -1009,14 +1012,14 @@ class FilterComponent extends Component {
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
-			case !$this->redirect && !empty($controller->request->data) && empty($controller->params['named']):
+			case !$this->redirect && !empty($controller->request->data) && empty($controller->request->params['named']):
 				$this->_collectPostData();
 				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
-			case !$this->redirect && empty($controller->request->data) && !empty($controller->params['named']):
+			case !$this->redirect && empty($controller->request->data) && !empty($controller->request->params['named']):
 				$this->_collectNamedParams();
 				$this->_processFields();
 				$this->_sanitizeForQuery();
