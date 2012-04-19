@@ -15,7 +15,7 @@ h2. Installation
 # Add the filter helper to the helpers array of the controller you want to filter on:
 @var $helpers = array('FIlter.Filter');@
 # Generate a filter form (table row) in your view:
-@<?php echo $this->Filter->inputTableRow('Post', array('Post.id', 'Post.title', 'Post.content'));?>@
+@<?php echo $this->Filter->tableRowForm('Post', array('Post.id', 'Post.title', 'Post.content'));?>@
 # For advanced configuration see: "Configuration":https://github.com/sitedyno/Filter/wiki/Configuration
 
 h2. Links
