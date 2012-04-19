@@ -214,7 +214,8 @@ class FilterHelper extends AppHelper {
  * @return void
  * @access public
  */
-	public function __construct($options = array()) {
+	public function __construct(View $View, $options = array()) {
+		parent::__construct($View, $options);
 		if(isset($options['typeMappings'])) {
 			$options['typeMappings'] = array_merge($this->typeMappings, $options['typeMappings']);
 		}
