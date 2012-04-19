@@ -8,8 +8,13 @@
  * @subpackage	filter.tests.cases.components
  */
 
-App::import('Model', 'AppModel');
-App::import('Component', 'Filter.Filter');
+App::uses('Model', 'Model');
+App::uses('AppModel', 'Model');
+App::uses('FilterComponent', 'Filter.Controller/Component');
+App::uses('Controller', 'Controller');
+App::uses('CakeRequest', 'Network');
+App::uses('CakeResponse', 'Network');
+App::uses('Sanitize', 'Utility');
 
 class Ad extends AppModel {
 	var $name = 'Ad';
@@ -140,13 +145,13 @@ class FilterComponentTestCase extends CakeTestCase {
  * @var array
  * @access public
  */
-	var $fixtures = array(/*
-		'plugin.filter.comment',
+	var $fixtures = array(
+		'plugin.filter.ad',
 		'plugin.filter.post',
 		'plugin.filter.posts_tag',
 		'plugin.filter.tag',
 		'plugin.filter.user',
-		'plugin.filter.user_profile',*/
+		'plugin.filter.user_profile',
 	);
 
 /**
@@ -155,12 +160,14 @@ class FilterComponentTestCase extends CakeTestCase {
  * @access public
  * @return void
  */
-	function startTest() {
-		$this->controller = new FilterTestController();
+	function setUp() {
+		parent::setUp();
+		$request = new CakeRequest('controller_posts/index');
+		$response = new CakeResponse();
+		$this->controller = new FilterTestController($request, $response);
 		$this->controller->constructClasses();
-		$this->controller->Component->init($this->controller);
+		$this->filter = new TestFilterComponent($this->controller->Components);
 		$this->controller->filter = $this->controller->TestFilter;
-		$this->filter = $this->controller->TestFilter;
 		$this->filter->initialize($this->controller);
 	}
 
@@ -170,7 +177,7 @@ class FilterComponentTestCase extends CakeTestCase {
  * @access public
  * @return void
  */
-	public function endTest() {
+	public function tearDown() {
 		ClassRegistry::flush();
 	}
 
@@ -666,7 +673,7 @@ class FilterComponentTestCase extends CakeTestCase {
 		);
 		$model = 'Fakemodel';
 		$expected = array();
-		$this->expectError(sprintf(__('Model %s is not an object of Controller::$modelClass', true), $model));
+		$this->setExpectedException('InternalErrorException',sprintf(__('Model %s is not an object of Controller::$modelClass'), $model));
 		$this->filter->collectNamedParams();
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
@@ -837,7 +844,7 @@ class FilterComponentTestCase extends CakeTestCase {
 			'Post.created' => 'fake_field',
 		);
 		$vfType = 'fake_field';
-		$this->expectError(sprintf(__('Unknown virtual field: %s', true), $vfType));
+		$this->setExpectedException('InternalErrorException', sprintf(__('Unknown virtual field: %s'), $vfType));
 		$this->filter->mapVirtualFields();
 	}
 
@@ -863,11 +870,11 @@ class FilterComponentTestCase extends CakeTestCase {
 
 	public function testParseDotFieldInvalidInput() {
 		$test = 'foo.bar.baz';
-		$this->expectError(sprintf(__('Unable to parse field %s', true), $test));
+		$this->setExpectedException('InternalErrorException', sprintf(__('Unable to parse field %s'), $test));
 		$this->filter->parseDotField($test);
 		$test = 'FakeModel.name';
 		$model = 'FakeModel';
-		$this->expectError(sprintf(__('Model %s is not an object of Controller::$modelClass', true), $model));
+		$this->setExpectedException('InternalErrorException', sprintf(__('Model %s is not an object of Controller::$modelClass'), $model));
 		$this->filter->parseDotField($test);
 	}
 
@@ -884,7 +891,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	public function testProcessFields() {
 		$this->filter->queryData = array(
 			'Post.title' => 'John',
-			'Post.created' => 'Nov 1',
+			'Post.created' => 'Nov 1 2010',
 		);
 		$expected = array(
 			'Post.title' => 'John',
@@ -898,7 +905,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	public function testProcessFieldsWithAll() {
 		$this->filter->queryData = array(
 			'Post.-all' => 'testing',
-			'Post.created' => 'Nov 1',
+			'Post.created' => 'Nov 1 2010',
 		);
 		$expected = array(
 			'Post.-all' => 'testing',

@@ -718,7 +718,7 @@ class FilterComponent extends Object {
 					}
 				}
 			} else {
-				trigger_error(sprintf(__('Unknown virtual field: %s', true), $vfType), E_USER_ERROR);
+				throw new InternalErrorException(sprintf(__('Unknown virtual field: %s'), $vfType));
 			}
 		}
 		return $this->_virtualFieldMaps;
@@ -736,7 +736,7 @@ class FilterComponent extends Object {
 		$count = count($parts);
 		$modelClass = $this->controller->modelClass;
 		if($count < 1 || $count > 2) {
-			trigger_error(sprintf(__('Unable to parse field %s', true), $field), E_USER_ERROR);
+			throw new InternalErrorException(sprintf(__('Unable to parse field %s'), $field));
 			return false;
 		}
 		if($count > 1) {
@@ -754,8 +754,7 @@ class FilterComponent extends Object {
 				|| !is_object($this->controller->{$modelClass}->{$model})
 			)
 		) {
-			trigger_error(sprintf(__('Model %s is not an object of Controller::$modelClass', true), $model), E_USER_ERROR);
-			//return false;
+			throw new InternalErrorException(sprintf(__('Model %s is not an object of Controller::$modelClass'), $model));
 			return array('model' => null, 'field' => null);
 		}
 		return array(

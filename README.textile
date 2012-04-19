@@ -1,6 +1,6 @@
 h1. Another Filter Plugin for CakePHP
 
-This plugin will make searching paginated lists in your CakePHP application easy.
+This plugin will make searching paginated lists in your CakePHP application easy. This branch is for CakePHP 2.0+
 
 h2. License
 
@@ -9,18 +9,18 @@ This plugin is licensed under the "MIT license":http://www.opensource.org/licens
 h2. Installation
 
 # Navigate to your plugins directory and use the following command:
-@git clone git://github.com/sitedyno/cakephp_filter_plugin.git filter@
+@git clone git://github.com/sitedyno/Filter.git Filter@
 # Add the filter component to the components array of the controller you want to filter on:
 @var $components = array('Filter.Filter');@
 # Add the filter helper to the helpers array of the controller you want to filter on:
 @var $helpers = array('FIlter.Filter');@
 # Generate a filter form (table row) in your view:
 @<?php echo $this->Filter->inputTableRow('Post', array('Post.id', 'Post.title', 'Post.content'));?>@
-# For advanced configuration see: "Configuration":https://github.com/sitedyno/cakephp_filter_plugin/wiki/Configuration
+# For advanced configuration see: "Configuration":https://github.com/sitedyno/Filter/wiki/Configuration
 
 h2. Links
 
-* "Filter Plugin Home":https://github.com/sitedyno/cakephp_filter_plugin
-* "Configuration":https://github.com/sitedyno/cakephp_filter_plugin/wiki/Configuration
-* "Bugs & Feedback":https://github.com/sitedyno/cakephp_filter_plugin/issues
-* "Wiki":https://github.com/sitedyno/cakephp_filter_plugin/wiki
+* "Filter Plugin Home":https://github.com/sitedyno/Filter
+* "Configuration":https://github.com/sitedyno/Filter/wiki/Configuration
+* "Bugs & Feedback":https://github.com/sitedyno/Filter/issues
+* "Wiki":https://github.com/sitedyno/Filter/wiki
