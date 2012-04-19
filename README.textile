@@ -16,11 +16,11 @@ h2. Installation
 @var $helpers = array('FIlter.Filter');@
 # Generate a filter form (table row) in your view:
 @<?php echo $this->Filter->inputTableRow('Post', array('Post.id', 'Post.title', 'Post.content'));?>@
-# For advanced configuration see: "Configuration":https://github.com/sitedyno/cakephp_filter_plugin/wiki/Configuration
+# For advanced configuration see: "Configuration":https://github.com/sitedyno/Filter/wiki/Configuration
 
 h2. Links
 
-* "Filter Plugin Home":https://github.com/sitedyno/cakephp_filter_plugin
-* "Configuration":https://github.com/sitedyno/cakephp_filter_plugin/wiki/Configuration
-* "Bugs & Feedback":https://github.com/sitedyno/cakephp_filter_plugin/issues
-* "Wiki":https://github.com/sitedyno/cakephp_filter_plugin/wiki
+* "Filter Plugin Home":https://github.com/sitedyno/Filter
+* "Configuration":https://github.com/sitedyno/Filter/wiki/Configuration
+* "Bugs & Feedback":https://github.com/sitedyno/Filter/issues
+* "Wiki":https://github.com/sitedyno/Filter/wiki
