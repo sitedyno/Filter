@@ -1,6 +1,6 @@
 h1. Another Filter Plugin for CakePHP
 
-This plugin will make searching paginated lists in your CakePHP application easy.
+This plugin will make searching paginated lists in your CakePHP application easy. This branch is for CakePHP 1.3+
 
 h2. License
 
@@ -9,7 +9,7 @@ This plugin is licensed under the "MIT license":http://www.opensource.org/licens
 h2. Installation
 
 # Navigate to your plugins directory and use the following command:
-@git clone git://github.com/sitedyno/cakephp_filter_plugin.git filter@
+@git clone git://github.com/sitedyno/Filter.git filter@
 # Add the filter component to the components array of the controller you want to filter on:
 @var $components = array('Filter.Filter');@
 # Add the filter helper to the helpers array of the controller you want to filter on:
