@@ -7,6 +7,8 @@
  * @package		filter
  * @subpackage	filter.controller.components
  */
+App::uses('Component', 'Controller');
+
 class FilterComponent extends Component {
 
 /**
@@ -643,9 +645,9 @@ class FilterComponent extends Component {
  * @access protected
  */
 	protected function _collectPostData() {
-		if(!empty($this->controller->data)) {
+		if(!empty($this->controller->request->data)) {
 			$modelObject = $this->controller->{$this->controller->modelClass};
-			foreach($this->controller->data as $model => $fields) {
+			foreach($this->controller->request->data as $model => $fields) {
 				$columnTypes = array();
 				if($model === $modelObject->alias) {
 					$columnTypes = $modelObject->getColumnTypes();
@@ -680,7 +682,7 @@ class FilterComponent extends Component {
 		$this->controller = $controller;
 		if($this->sanitizeForQuery || $this->sanitizeForRedirect) {
 			if(!class_exists('Sanitize')) {
-				App::import('Sanitize');
+				App::uses('Sanitize', 'Utility');
 			}
 		}
 		$this->_mapVirtualFields();
@@ -920,7 +922,7 @@ class FilterComponent extends Component {
 		if(!empty($this->queryData)) {
 			foreach($this->queryData as $dotField => $value) {
 				extract($this->_parseDotField($dotField));
-				$controller->data[$model][$field] = $value;
+				$controller->request->data[$model][$field] = $value;
 			}
 		}
 	}
@@ -970,14 +972,14 @@ class FilterComponent extends Component {
 			return;
 		}
 		$this->controller = $controller;
-		if(isset($controller->data['Filter']['reset'])) {
-			$controller->data = array();
+		if(isset($controller->request->data['Filter']['reset'])) {
+			$controller->request->data = array();
 			return;
 		}
 		switch (true) {
-			case empty($controller->data) && empty($controller->params['named']):
+			case empty($controller->request->data) && empty($controller->params['named']):
 				break;
-			case $this->redirect && !empty($controller->data) && !empty($controller->params['named']):
+			case $this->redirect && !empty($controller->request->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
 				$this->_collectPostData();
 				$this->_processFields();
@@ -985,21 +987,21 @@ class FilterComponent extends Component {
 				$this->_buildRedirectUrl();
 				$controller->redirect($this->url);
 				break;
-			case $this->redirect && !empty($controller->data) && empty($controller->params['named']):
+			case $this->redirect && !empty($controller->request->data) && empty($controller->params['named']):
 				$this->_collectPostData();
 				$this->_processFields();
 				$this->_sanitizeForRedirect();
 				$this->_buildRedirectUrl();
 				$controller->redirect($this->url);
 				break;
-			case $this->redirect && empty($controller->data) && !empty($controller->params['named']):
+			case $this->redirect && empty($controller->request->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
 				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
-			case !$this->redirect && !empty($controller->data) && !empty($controller->params['named']):
+			case !$this->redirect && !empty($controller->request->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
 				$this->_collectPostData();
 				$this->_processFields();
@@ -1007,14 +1009,14 @@ class FilterComponent extends Component {
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
-			case !$this->redirect && !empty($controller->data) && empty($controller->params['named']):
+			case !$this->redirect && !empty($controller->request->data) && empty($controller->params['named']):
 				$this->_collectPostData();
 				$this->_processFields();
 				$this->_sanitizeForQuery();
 				$this->buildQuery($controller->{$controller->modelClass});
 				$this->_assignQuery();
 				break;
-			case !$this->redirect && empty($controller->data) && !empty($controller->params['named']):
+			case !$this->redirect && empty($controller->request->data) && !empty($controller->params['named']):
 				$this->_collectNamedParams();
 				$this->_processFields();
 				$this->_sanitizeForQuery();

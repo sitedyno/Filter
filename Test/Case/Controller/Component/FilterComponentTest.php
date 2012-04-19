@@ -14,7 +14,6 @@ App::uses('FilterComponent', 'Filter.Controller/Component');
 App::uses('Controller', 'Controller');
 App::uses('CakeRequest', 'Network');
 App::uses('CakeResponse', 'Network');
-App::uses('Sanitize', 'Utility');
 
 class Ad extends AppModel {
 	var $name = 'Ad';
@@ -709,7 +708,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testCollectPostData() {
-		$this->controller->data = array(
+		$this->controller->request->data = array(
 			'Post' => array(
 				'title' => 'Post',
 			),
@@ -727,7 +726,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testCollectPostDataWithAll() {
-		$this->controller->data = array(
+		$this->controller->request->data = array(
 			'Post' => array(
 				'-all' => 'testing',
 			)
@@ -745,7 +744,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testCollectPostDataWithEmptyField() {
-		$this->controller->data = array(
+		$this->controller->request->data = array(
 			'Post' => array(
 				'title' => 'John',
 				'created' => '',
@@ -760,7 +759,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testCollectPostDataWithFakeField() {
-		$this->controller->data = array(
+		$this->controller->request->data = array(
 			'Post' => array(
 				'fake_field' => 'blah',
 			)
@@ -772,7 +771,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testCollectPostDataWithFakeModel() {
-		$this->controller->data = array(
+		$this->controller->request->data = array(
 			'FakeModel' => array(
 				'name' => 'Jane',
 			),
@@ -784,7 +783,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testCollectPostDataWithIgnoredField() {
-		$this->controller->data = array(
+		$this->controller->request->data = array(
 			'Post' => array(
 				'title' => 'Post',
 			)
@@ -797,7 +796,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testCollectPostDataWithVirtualFields() {
-		$this->controller->data = array(
+		$this->controller->request->data = array(
 			'Post' => array(
 				'created-start' => '2010-11-01',
 				'created-end' => '2010-11-05'
