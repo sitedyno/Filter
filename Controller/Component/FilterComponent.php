@@ -680,8 +680,7 @@ class FilterComponent extends Component {
  * @return void
  * @access public
  */
-	public function initialize(&$controller, $settings = array()) {
-		$this->_set($settings);
+	public function initialize(&$controller) {
 		$this->controller = $controller;
 		if($this->sanitizeForQuery || $this->sanitizeForRedirect) {
 			if(!class_exists('Sanitize')) {
@@ -983,7 +982,7 @@ class FilterComponent extends Component {
 			case empty($controller->request->data) && empty($controller->request->params['named']):
 				break;
 			case $this->redirect && !empty($controller->request->data) && !empty($controller->request->params['named']):
-				$this->_collectNamedParams();
+				//$this->_collectNamedParams();
 				$this->_collectPostData();
 				$this->_processFields();
 				$this->_sanitizeForRedirect();

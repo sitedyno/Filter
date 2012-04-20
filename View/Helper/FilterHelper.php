@@ -337,7 +337,6 @@ class FilterHelper extends AppHelper {
 		$modelKey = $this->model();
 		$fieldKey = $this->field();
 		if(!isset($this->Form->fieldset[$modelKey])) {
-			// this is likely to break in 2.0 :/
 			$this->Form->_introspectModel($modelKey);
 		}
 		if(isset($this->Form->fieldset[$modelKey]['fields'][$fieldKey]['type'])) {
