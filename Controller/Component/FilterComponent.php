@@ -249,8 +249,9 @@ class FilterComponent extends Component {
  *
  * @var bool
  * @access public
+ * @todo This may need to default to false for cakephp 2.x, confirm this!
  */
-	public $urlencode = true;
+	public $urlencode = false;
 
 /**
  * Virtual field definitions. Will be used for ranges (between), before, after,
@@ -500,7 +501,7 @@ class FilterComponent extends Component {
  * @return void
  * @access public
  */
-	public function beforeRender(&$controller) {
+	public function beforeRender(Controller $controller) {
 		$this->_setPostData($controller);
 	}
 
@@ -680,7 +681,7 @@ class FilterComponent extends Component {
  * @return void
  * @access public
  */
-	public function initialize(&$controller) {
+	public function initialize(Controller $controller) {
 		$this->controller = $controller;
 		if($this->sanitizeForQuery || $this->sanitizeForRedirect) {
 			if(!class_exists('Sanitize')) {
@@ -969,7 +970,7 @@ class FilterComponent extends Component {
  * @return
  * @access public
  */
-	public function startup(&$controller) {
+	public function startup(Controller $controller) {
 		if(!in_array($controller->action, $this->actions)) {
 			return;
 		}

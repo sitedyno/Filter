@@ -203,7 +203,7 @@ class FilterHelper extends AppHelper {
  * @return void
  * @access public
  */
-	public function beforeRender() {
+	public function beforeRender($viewFile) {
 		$this->_set(Configure::read('FilterComponent'));
 	}
 
