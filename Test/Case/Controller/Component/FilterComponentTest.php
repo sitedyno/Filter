@@ -159,7 +159,7 @@ class FilterComponentTestCase extends CakeTestCase {
  * @access public
  * @return void
  */
-	function setUp() {
+	public function setUp() {
 		parent::setUp();
 		$request = new CakeRequest('controller_posts/index');
 		$response = new CakeResponse();
@@ -179,7 +179,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	public function tearDown() {
 		ClassRegistry::flush();
 	}
-/*
+
 	public function testAddInnerJoins() {
 		$expected = array(
 			'joins' => array(
@@ -604,7 +604,7 @@ class FilterComponentTestCase extends CakeTestCase {
 		$result = $this->filter->buildRedirectUrl();
 		$this->assertEqual($result, $expected);
 	}
-*/
+
 	public function testCollectNamedParams() {
 		$this->controller->request->addParams(array(
 			'named' => array(
