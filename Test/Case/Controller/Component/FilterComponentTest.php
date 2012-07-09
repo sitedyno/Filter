@@ -1031,6 +1031,7 @@ class FilterComponentTestCase extends CakeTestCase {
 
 	public function testSanitizeForRedirect() {
 		// urlencode = true, sanitizeForRedirect = true
+		$this->filter->urlencode = true;
 		$this->filter->queryData = array(
 			'Post.created' => '2010-10-31 15:30:00',
 		);
@@ -1043,6 +1044,7 @@ class FilterComponentTestCase extends CakeTestCase {
 	}
 
 	public function testSanitizeForRedirectWithAll() {
+		$this->filter->urlencode = true;
 		$this->filter->queryData = array(
 			'Post.-all' => '<p>some html</p>',
 		);
@@ -1060,6 +1062,7 @@ class FilterComponentTestCase extends CakeTestCase {
 
 	public function testSanitizeForRedirectWithoutSanitizie() {
 		// urlencode = true, sanitizeForRedirect = false
+		$this->filter->urlencode = true;
 		$this->filter->queryData = array(
 			'Post.content' => '<p>some html</p>',
 		);
@@ -1089,6 +1092,7 @@ class FilterComponentTestCase extends CakeTestCase {
 
 	public function testSanitizeForRedirectRemovesHtml() {
 		// urlencode = true, sanitizeForRedirect = false
+		$this->filter->urlencode = true;
 		$this->filter->queryData = array(
 			'Post.content' => '<p>some html</p>',
 		);
@@ -1102,6 +1106,7 @@ class FilterComponentTestCase extends CakeTestCase {
 
 	public function testSanitizeForRedirectFormattedField() {
 		// urlencode = true, sanitizeForRedirect = true
+		$this->filter->urlencode = true;
 		$this->filter->queryData = array(
 			'Post.created' => '2010-10-31 15:30:00',
 		);
@@ -1118,6 +1123,7 @@ class FilterComponentTestCase extends CakeTestCase {
 
 	public function testSanitizeForRedirectWithVirtualField() {
 		// urlencode = true, sanitizeForRedirect = true
+		$this->filter->urlencode = true;
 		$this->filter->queryData = array(
 			'User.name-start' => 'evilstring!@#$%^&*()',
 			'User.name-end' => '<p>some html to boot</p>',
