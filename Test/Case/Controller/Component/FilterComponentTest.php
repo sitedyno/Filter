@@ -16,72 +16,107 @@ App::uses('CakeRequest', 'Network');
 App::uses('CakeResponse', 'Network');
 
 class Ad extends AppModel {
-	var $name = 'Ad';
-	var $belongsTo = array('Post');
+
+	public $name = 'Ad';
+
+	public $belongsTo = array('Post');
+
 }
 class Comment extends AppModel {
-	var $name = 'Comment';
-	var $belongsTo = array('Post', 'User');
+
+	public $name = 'Comment';
+
+	public $belongsTo = array('Post', 'User');
+
 }
 class Post extends AppModel {
-	var $name = 'Post';
-	var $belongsTo = array('User');
-	var $hasAndBelongsToMany = array('Tag');
-	var $hasMany = array('Comment');
-	var $hasOne = array('Ad');
+
+	public $name = 'Post';
+
+	public $belongsTo = array('User');
+
+	public $hasAndBelongsToMany = array('Tag');
+
+	public $hasMany = array('Comment');
+
+	public $hasOne = array('Ad');
+
 }
 class Tag extends AppModel {
-	var $name = 'Tag';
-	var $hasAndBelongsToMany = array('Post');
+
+	public $name = 'Tag';
+
+	public $hasAndBelongsToMany = array('Post');
+
 }
 class User extends AppModel {
-	var $name = 'User';
-	var $hasMany = array('Comment', 'Post');
-	var $hasOne = array('UserProfile');
+
+	public $name = 'User';
+
+	public $hasMany = array('Comment', 'Post');
+
+	public $hasOne = array('UserProfile');
+
 }
 class UserProfile extends AppMOdel {
-	var $name = 'UserProfile';
-	var $belongsTo = array('User');
+
+	public $name = 'UserProfile';
+
+	public $belongsTo = array('User');
+
 }
 
 
 class TestFilterComponent extends FilterComponent {
+
 	public function addInnerJoin(&$model, $hasManyModel) {
 		return $this->_addInnerJoin($model, $hasManyModel);
 	}
+
 	public function addInnerJoins(&$model, $field, $values) {
 		return $this->_addInnerJoins($model, $field, $values);
 	}
+
 	public function addWildcards($values) {
 		return $this->_addWildcards($values);
 	}
+
 	public function assignQuery() {
 		return $this->_assignQuery();
 	}
+
 	public function buildRedirectUrl() {
 		return $this->_buildRedirectUrl();
 	}
+
 	public function collectNamedParams() {
 		return $this->_collectNamedParams();
 	}
+
 	public function collectPostData() {
 		return $this->_collectPostData();
 	}
+
 	public function mapVirtualFields() {
 		return $this->_mapVirtualFields();
 	}
+
 	public function parseDotField($field) {
 		return $this->_parseDotField($field);
 	}
+
 	public function processFields() {
 		return $this->_processFields();
 	}
+
 	public function sanitizeForQuery() {
 		return $this->_sanitizeForQuery();
 	}
+
 	public function sanitizeForRedirect() {
 		return $this->_sanitizeForRedirect();
 	}
+
 }
 
 class FilterTestController extends Controller {
@@ -89,42 +124,42 @@ class FilterTestController extends Controller {
 /**
  * Components property
  *
- * @var array
+ * @public array
  * @access public
  */
-	var $components = array('TestFilter');
+	public $components = array('TestFilter');
 
 /**
  * Data property
  *
- * @var array
+ * @public array
  * @access public
  */
-	var $data = array();
+	public $data = array();
 
 /**
  * Paginate property
  *
- * @var array
+ * @public array
  * @access public
  */
-	var $paginate = array();
+	public $paginate = array();
 
 /**
  * Params property
  *
- * @var array
+ * @public array
  * @access public
  */
-	var $params = array('url' => array('url' => 'posts'));
+	public $params = array('url' => array('url' => 'posts'));
 
 /**
  * Uses property
  *
- * @var array
+ * @public array
  * @access public
  */
-	var $uses = array('Post');
+	public $uses = array('Post');
 
 }
 
@@ -133,18 +168,18 @@ class FilterComponentTestCase extends CakeTestCase {
 /**
  * Controller property
  *
- * @var FilterTestController
+ * @public FilterTestController
  * @access public
  */
-	var $Controller;
+	public $Controller;
 
 /**
  * Fixtures property
  *
- * @var array
+ * @public array
  * @access public
  */
-	var $fixtures = array(
+	public $fixtures = array(
 		'plugin.filter.ad',
 		'plugin.filter.post',
 		'plugin.filter.posts_tag',
@@ -1140,6 +1175,6 @@ class FilterComponentTestCase extends CakeTestCase {
 		$result = $this->filter->queryData;
 		$this->assertEqual($result, $expected);
 	}
- 
+
 }
-?>
+
